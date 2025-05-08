@@ -2,6 +2,9 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import altair as alt
+from fpdf import FPDF
+from datetime import datetime
+from io import BytesIO
 
 st.set_page_config(page_title="Reporte de Sueldos", layout="wide")
 st.title("Reporte Interactivo de Sueldos")
@@ -55,6 +58,61 @@ col4.metric("Mediana Sueldo Bruto", f"${mediana:,.0f}")
 col5, col6 = st.columns(2)
 col5.metric("% empleados entre P25 y P75", f"{porcentaje_en_banda:.1f}%")
 col6.metric("Costo Laboral Total (24.5%)", f"${costo_total:,.0f}")
+
+# Interpretaciones automáticas
+st.markdown("### Conclusiones")
+conclusiones = []
+if len(df_filtered) > 0:
+    conclusiones.append(f"El sueldo bruto promedio es de ${promedio:,.0f}, con una mediana de ${mediana:,.0f}, lo que indica {'una distribución equilibrada' if abs(promedio - mediana) < 1000 else 'una posible asimetría en los datos'}.")
+    conclusiones.append(f"El rango de sueldos va desde ${minimo:,.0f} hasta ${maximo:,.0f}.")
+    if not np.isnan(porcentaje_en_banda):
+        conclusiones.append(f"El {porcentaje_en_banda:.1f}% de las personas están dentro de la banda salarial entre el percentil 25 y 75, lo cual {'es adecuado' if porcentaje_en_banda > 50 else 'podría indicar desvíos salariales'}.")
+    conclusiones.append(f"El costo laboral total estimado (sueldo + 24.5%) asciende a ${costo_total:,.0f}.")
+    for c in conclusiones:
+        st.markdown(f"- {c}")
+else:
+    st.info("No hay datos disponibles con los filtros actuales para generar conclusiones.")
+
+# Generar PDF con FPDF
+class PDF(FPDF):
+    def header(self):
+        self.image("07 (1).png", 10, 8, 40)
+        self.set_font("Arial", 'B', 12)
+        self.cell(0, 10, f"Clusterciar - Reporte de Sueldos ({datetime.today().strftime('%d/%m/%Y')})", ln=True, align="C")
+        self.ln(10)
+
+    def footer(self):
+        self.set_y(-15)
+        self.set_font("Arial", "I", 8)
+        self.cell(0, 10, f"Página {self.page_no()}", align="C")
+
+    def chapter_body(self, texto):
+        self.set_font("Arial", "", 11)
+        for linea in texto:
+            self.multi_cell(0, 10, linea)
+        self.ln()
+
+# Botón para descargar PDF
+if st.button("Descargar Informe en PDF"):
+    pdf = PDF()
+    pdf.add_page()
+    pdf.chapter_body([f"Total de personas: {len(df_filtered)}",
+                      f"Sueldo bruto promedio: ${promedio:,.0f}",
+                      f"Sueldo mínimo: ${minimo:,.0f}",
+                      f"Sueldo máximo: ${maximo:,.0f}",
+                      f"Mediana: ${mediana:,.0f}",
+                      f"% empleados en banda (P25-P75): {porcentaje_en_banda:.1f}%",
+                      f"Costo laboral total: ${costo_total:,.0f}",
+                      ""] + conclusiones)
+
+    pdf_output = BytesIO()
+    pdf.output(pdf_output)
+    st.download_button(
+        label="Descargar PDF",
+        data=pdf_output.getvalue(),
+        file_name="reporte_sueldos.pdf",
+        mime="application/pdf"
+    )
 
 # Gráfico de distribución
 st.markdown("### Distribución de Sueldos Brutos")
