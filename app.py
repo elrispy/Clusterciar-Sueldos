@@ -6,12 +6,8 @@ import altair as alt
 st.set_page_config(page_title="Reporte de Sueldos", layout="wide")
 st.title("Reporte Interactivo de Sueldos")
 
-# Subir archivo Excel
-st.sidebar.header("1. Subir archivo Excel")
-uploaded_file = st.sidebar.file_uploader("Elige un archivo Excel", type=["xlsx"])
-
-if uploaded_file:
-    df = pd.read_excel(uploaded_file, sheet_name=0)
+# Cargar archivo Excel desde el proyecto
+df = pd.read_excel("SUELDOS PARA INFORMES.xlsx", sheet_name=0)
 
     st.sidebar.header("2. Filtros")
     filtros = {
@@ -60,5 +56,4 @@ if uploaded_file:
         mime='text/csv',
     )
 
-else:
-    st.info("Por favor, sube un archivo Excel para comenzar.")
+
