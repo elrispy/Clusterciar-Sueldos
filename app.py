@@ -126,11 +126,12 @@ st.download_button(
 )
 
 # Exportar a PDF (versión resumida)
+# Exportar a PDF (versión resumida)
 if st.button("Generar reporte en PDF"):
     pdf = FPDF()
     pdf.add_page()
     pdf.set_font("Arial", size=12)
-    pdf.image("07 (1).png", x=10, y=8, w=50)
+    pdf.image("07 (1).png", x=10, y=8, w=50)  # <- ahora está en el lugar correcto
     pdf.ln(30)
     pdf.cell(200, 10, txt="Reporte de Sueldos - Clusterciar", ln=True, align='C')
     pdf.ln(10)
@@ -144,3 +145,4 @@ if st.button("Generar reporte en PDF"):
     pdf.output(tmpfile.name)
     with open(tmpfile.name, "rb") as f:
         st.download_button("Descargar reporte en PDF", f.read(), file_name="reporte_sueldos.pdf", mime="application/pdf")
+
