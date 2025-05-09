@@ -12,9 +12,9 @@ import tempfile
 st.set_page_config(page_title="Reporte de Sueldos", layout="wide")
 st.title("Reporte Interactivo de Sueldos")
 
+# Logo
 logo = Image.open("logo-clusterciar.png")
-...
-pdf.image("logo-clusterciar.png", x=10, y=8, w=50)
+st.image(logo, width=200)
 
 # Cargar archivo Excel desde el proyecto
 df = pd.read_excel("SUELDOS PARA INFORMES.xlsx", sheet_name=0)
@@ -126,12 +126,11 @@ st.download_button(
 )
 
 # Exportar a PDF (versión resumida)
-# Exportar a PDF (versión resumida)
 if st.button("Generar reporte en PDF"):
     pdf = FPDF()
     pdf.add_page()
     pdf.set_font("Arial", size=12)
-    pdf.image("07 (1).png", x=10, y=8, w=50)  # <- ahora está en el lugar correcto
+    pdf.image("logo-clusterciar.png", x=10, y=8, w=50)
     pdf.ln(30)
     pdf.cell(200, 10, txt="Reporte de Sueldos - Clusterciar", ln=True, align='C')
     pdf.ln(10)
@@ -145,4 +144,3 @@ if st.button("Generar reporte en PDF"):
     pdf.output(tmpfile.name)
     with open(tmpfile.name, "rb") as f:
         st.download_button("Descargar reporte en PDF", f.read(), file_name="reporte_sueldos.pdf", mime="application/pdf")
-
