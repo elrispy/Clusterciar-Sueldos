@@ -12,9 +12,9 @@ import tempfile
 st.set_page_config(page_title="Reporte de Sueldos", layout="wide")
 st.title("Reporte Interactivo de Sueldos")
 
-# Logo
-logo = Image.open("07 (1).png")
-st.image(logo, width=200)
+logo = Image.open("logo-clusterciar.png")
+...
+pdf.image("logo-clusterciar.png", x=10, y=8, w=50)
 
 # Cargar archivo Excel desde el proyecto
 df = pd.read_excel("SUELDOS PARA INFORMES.xlsx", sheet_name=0)
