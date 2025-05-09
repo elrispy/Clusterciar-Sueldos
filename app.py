@@ -73,11 +73,12 @@ else:
     st.info("No hay datos disponibles con los filtros actuales para generar conclusiones.")
 
 # Gráfico de distribución
+# Gráfico de distribución corregido
 st.markdown("### Distribución de Sueldos Brutos")
 hist = alt.Chart(df_filtered).mark_bar(opacity=0.8).encode(
     alt.X("Total sueldo bruto", bin=alt.Bin(maxbins=40), title="Sueldo Bruto"),
-    y='count()',
-    tooltip=['Apellido', 'Nombre', 'Puesto']
+    y=alt.Y('count()', title='Cantidad de personas'),
+    tooltip=[alt.Tooltip('count()', title='Cantidad')]
 ).properties(height=300)
 st.altair_chart(hist, use_container_width=True)
 
