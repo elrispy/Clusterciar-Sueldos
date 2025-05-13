@@ -6,3 +6,5 @@ fpdf
 matplotlib
 Pillow
 xlsxwriter
+openpyxl
+
