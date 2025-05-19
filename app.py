@@ -12,19 +12,36 @@ st.set_page_config(page_title="Reporte de Sueldos", layout="wide")
 st.title("Reporte Interactivo de Sueldos")
 
 # Cargar logo
-logo = Image.open("logo-clusterciar.png")
-st.image(logo, width=200)
+try:
+    logo = Image.open("logo-clusterciar.png")
+    st.image(logo, width=200)
+except FileNotFoundError:
+    st.warning("No se encontró el archivo logo-clusterciar.png")
 
 # Cargar archivo Excel
-df = pd.read_excel("SUELDOS PARA INFORMES.xlsx", sheet_name=0)
+try:
+    df = pd.read_excel("SUELDOS PARA INFORMES.xlsx", sheet_name=0)
+except FileNotFoundError:
+    st.error("No se encontró el archivo SUELDOS PARA INFORMES.xlsx")
+    st.stop()
 
 # Limpiar nombres de columnas
 df.columns = df.columns.str.strip().str.replace(' ', '_').str.replace('%_BANDA_SALARIAL', 'Porcentaje_Banda_Salarial')
 
-# Convertir columnas categóricas a string y manejar NaN
-categorical_columns = ['Empresa', 'CCT', 'Grupo', 'Comitente', 'Puesto', 'seniority', 'Gerencia', 'CVH', 'Puesto_tabla_salarial', 'Locacion']
+# Convertir columnas categóricas a string y manejar valores inválidos
+categorical_columns = [
+    'Empresa', 'CCT', 'Grupo', 'Comitente', 'Puesto', 'seniority', 'Gerencia', 'CVH',
+    'Puesto_tabla_salarial', 'Locacion', 'Centro_de_Costos', 'Especialidad', 'Superior'
+]
 for col in categorical_columns:
-    df[col] = df[col].astype(str).replace('nan', '')
+    if col in df.columns:
+        df[col] = df[col].astype(str).replace(['#Ref', 'nan'], '')
+
+# Convertir columnas de fecha
+date_columns = ['Fecha_de_Ingreso', 'Fecha_de_nacimiento']
+for col in date_columns:
+    if col in df.columns:
+        df[col] = pd.to_datetime(df[col], errors='coerce')
 
 # Filtros en la barra lateral
 st.sidebar.header("Filtros")
@@ -38,7 +55,10 @@ filtros = {
     "Gerencia": st.sidebar.multiselect("Gerencia", df["Gerencia"].unique()),
     "CVH": st.sidebar.multiselect("CVH", df["CVH"].unique()),
     "Puesto_tabla_salarial": st.sidebar.multiselect("Puesto tabla salarial", df["Puesto_tabla_salarial"].unique()),
-    "Locacion": st.sidebar.multiselect("Locacion", df["Locacion"].unique()),
+    "Locacion": st.sidebar.multiselect("Locación", df["Locacion"].unique()),
+    "Centro_de_Costos": st.sidebar.multiselect("Centro de Costos", df["Centro_de_Costos"].unique()),
+    "Especialidad": st.sidebar.multiselect("Especialidad", df["Especialidad"].unique()),
+    "Superior": st.sidebar.multiselect("Superior", df["Superior"].unique())
 }
 
 # Aplicar filtros
@@ -54,7 +74,7 @@ if len(df_filtered) > 0:
     promedio = df_filtered['Total_sueldo_bruto'].mean()
     minimo = df_filtered['Total_sueldo_bruto'].min()
     maximo = df_filtered['Total_sueldo_bruto'].max()
-    costo_total = df_filtered['Total_sueldo_bruto'].sum() * 1.245
+    costo_total = df_filtered['Costo_laboral'].sum()
 
     # Porcentaje de empleados entre P25 y P75
     en_banda = df_filtered[df_filtered['Porcentaje_Banda_Salarial'].between(0.15, 0.75)]
@@ -65,7 +85,7 @@ if len(df_filtered) > 0:
     col1.metric("Total personas", len(df_filtered))
     col2.metric("Sueldo Bruto Promedio", f"${promedio:,.0f}")
     col3.metric("Sueldo Mínimo / Máximo", f"${minimo:,.0f} / ${maximo:,.0f}")
-    col4.metric("Costo Laboral Total (24.5%)", f"${costo_total:,.0f}")
+    col4.metric("Costo Laboral Total", f"${costo_total:,.0f}")
 
     col5 = st.columns(1)[0]
     col5.metric("% empleados entre P25 y P75", f"{porcentaje_en_banda:.1f}%")
@@ -75,7 +95,7 @@ if len(df_filtered) > 0:
     st.markdown(f"- El sueldo bruto promedio es de **${promedio:,.0f}**.")
     st.markdown(f"- El rango va de **${minimo:,.0f}** a **${maximo:,.0f}**.")
     st.markdown(f"- El **{porcentaje_en_banda:.1f}%** de los empleados está entre el 15% y el 75% de la banda salarial.")
-    st.markdown(f"- El costo laboral total estimado asciende a **${costo_total:,.0f}**.")
+    st.markdown(f"- El costo laboral total asciende a **${costo_total:,.0f}**.")
 else:
     st.info("No hay datos disponibles con los filtros actuales para generar conclusiones.")
     promedio, minimo, maximo, costo_total, porcentaje_en_banda = 0, 0, 0, 0, 0
@@ -94,8 +114,13 @@ else:
 
 # Comparación por categoría
 st.markdown("### Comparación por Categoría")
-agrupadores = ["Empresa", "CCT", "Grupo", "Comitente", "Puesto", "seniority", "Gerencia", "CVH", "Puesto_tabla_salarial", "Locacion"]
-grupo_seleccionado = st.selectbox("Selecciona una categoría para agrupar", agrupadores, index=6)
+agrupadores = [
+    'Empresa', 'CCT', 'Grupo', 'Comitente', 'Puesto', 'seniority', 'Gerencia', 'CVH',
+    'Puesto_tabla_salarial', 'Locacion', 'Centro_de_Costos', 'Especialidad', 'Superior'
+]
+# Filtrar agrupadores para incluir solo columnas existentes
+agrupadores = [col for col in agrupadores if col in df.columns]
+grupo_seleccionado = st.selectbox("Selecciona una categoría para agrupar", agrupadores, index=agrupadores.index('Gerencia') if 'Gerencia' in agrupadores else 0)
 
 if len(df_filtered) > 0:
     # Calcular la media por grupo y limpiar datos
@@ -151,7 +176,10 @@ if st.button("Generar reporte en PDF"):
     pdf = FPDF()
     pdf.add_page()
     pdf.set_font("Arial", size=12)
-    pdf.image("logo-clusterciar.png", x=10, y=8, w=50)
+    try:
+        pdf.image("logo-clusterciar.png", x=10, y=8, w=50)
+    except:
+        pdf.cell(200, 10, txt="Logo no disponible", ln=True, align='C')
     pdf.ln(30)
     pdf.cell(200, 10, txt="Reporte de Sueldos - Clusterciar", ln=True, align='C')
     pdf.ln(10)
