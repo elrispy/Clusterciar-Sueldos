@@ -7,6 +7,7 @@ from PIL import Image
 from fpdf import FPDF
 import tempfile
 from datetime import datetime
+import os
 
 # Configuración de la página
 st.set_page_config(page_title="Reporte de Sueldos", layout="wide")
@@ -58,7 +59,6 @@ if 'Antigüedad' not in df.columns and 'Fecha_de_Ingreso' in df.columns:
 # Normalizar Porcentaje_Banda_Salarial (asegurar que esté entre 0 y 1)
 if 'Porcentaje_Banda_Salarial' in df.columns:
     df['Porcentaje_Banda_Salarial'] = pd.to_numeric(df['Porcentaje_Banda_Salarial'], errors='coerce')
-    # Si está en porcentaje (ej., 25), convertir a decimal (0.25)
     df['Porcentaje_Banda_Salarial'] = df['Porcentaje_Banda_Salarial'].apply(lambda x: x / 100 if x > 1 else x)
 
 # Filtros en la barra lateral
@@ -117,10 +117,11 @@ if len(df_filtered) > 0:
     col3.metric("Antigüedad Promedio", f"{promedio_antiguedad:.1f} años")
     col4.metric("Sueldo Bruto Promedio", f"${promedio_sueldo:,.0f}")
 
-    col5, col6, col7 = st.columns(3)
+    col5, col6, col7, col8 = st.columns(4)
     col5.metric("Sueldo Mínimo", f"${minimo_sueldo:,.0f}")
     col6.metric("Sueldo Máximo", f"${maximo_sueldo:,.0f}")
     col7.metric("Dispersión Salarial", f"${dispersion_sueldo:,.0f} ({dispersion_porcentaje:.1f}%)")
+    col8.metric("Costo Laboral Total", f"${costo_total:,.0f}")
 
     # Distribución de Especialidad
     st.markdown("### Distribución de Especialidad")
@@ -169,7 +170,7 @@ agrupadores = [
     'Puesto_tabla_salarial', 'Locacion', 'Centro_de_Costos', 'Especialidad', 'Superior'
 ]
 agrupadores = [col for col in agrupadores if col in df.columns]
-grupo_seleccionado = st.selectbox("Selecciona una categoría para agrupar", agrupadores, index=agrupadores.index('Puesto') if 'Puesto' in agrupadores else 0)
+grupo_seleccionado = st.selectbox("Selecciona una categoría para agrupar", agrupadores, index=agrupadores.index('Puesto_tabla_salarial') if 'Puesto_tabla_salarial' in agrupadores else 0)
 
 if len(df_filtered) > 0:
     # Calcular métricas por grupo
@@ -194,11 +195,11 @@ if len(df_filtered) > 0:
     ).properties(height=400)
     st.altair_chart(chart, use_container_width=True)
 
-    # Si se selecciona Puesto, mostrar distribución de Seniority
-    if grupo_seleccionado == 'Puesto':
-        st.markdown("### Distribución de Seniority por Puesto")
-        puesto_seleccionado = st.selectbox("Selecciona un Puesto", df_filtered['Puesto'].unique())
-        df_puesto = df_filtered[df_filtered['Puesto'] == puesto_seleccionado]
+    # Si se selecciona Puesto_tabla_salarial, mostrar distribución de Seniority
+    if grupo_seleccionado == 'Puesto_tabla_salarial':
+        st.markdown("### Distribución de Seniority por Puesto Tabla Salarial")
+        puesto_seleccionado = st.selectbox("Selecciona un Puesto Tabla Salarial", df_filtered['Puesto_tabla_salarial'].unique())
+        df_puesto = df_filtered[df_filtered['Puesto_tabla_salarial'] == puesto_seleccionado]
         if len(df_puesto) > 0:
             seniority_dist = df_puesto['seniority'].value_counts(normalize=True) * 100
             seniority_dist = seniority_dist.reset_index()
@@ -217,7 +218,7 @@ if len(df_filtered) > 0:
             st.write(f"- Promedio: ${sueldo_stats['mean']:,.0f}")
             st.write(f"- Máximo: ${sueldo_stats['max']:,.0f}")
         else:
-            st.warning("No hay datos para el puesto seleccionado.")
+            st.warning("No hay datos para el puesto tabla salarial seleccionado.")
 
     # Si se selecciona Seniority, mostrar sueldos
     if grupo_seleccionado == 'seniority':
@@ -272,36 +273,66 @@ st.download_button(
 if st.button("Generar reporte en PDF"):
     pdf = FPDF()
     pdf.add_page()
-    pdf.set_font("Arial", size=12)
-    try:
-        pdf.image("logo-clusterciar.png", x=10, y=8, w=50)
-    except:
-        pdf.cell(200, 10, txt="Logo no disponible", ln=True, align='C')
-    pdf.ln(30)
-    pdf.cell(200, 10, txt="Reporte de Sueldos - Clusterciar", ln=True, align='C')
-    pdf.ln(10)
-    pdf.cell(200, 10, txt=f"Total personas: {len(df_filtered)}", ln=True)
-    pdf.cell(200, 10, txt=f"Edad promedio: {promedio_edad:.1f} años", ln=True)
-    pdf.cell(200, 10, txt=f"Antigüedad promedio: {promedio_antiguedad:.1f} años", ln=True)
-    pdf.cell(200, 10, txt=f"Sueldo promedio: ${promedio_sueldo:,.0f}", ln=True)
-    pdf.cell(200, 10, txt=f"Sueldo mínimo / máximo: ${minimo_sueldo:,.0f} / ${maximo_sueldo:,.0f}", ln=True)
-    pdf.cell(200, 10, txt=f"Dispersión salarial: ${dispersion_sueldo:,.0f} ({dispersion_porcentaje:.1f}%)", ln=True)
-    pdf.cell(200, 10, txt=f"Porcentaje <25%: {banda_25:.1f}%", ln=True)
-    pdf.cell(200, 10, txt=f"Porcentaje <50%: {banda_50:.1f}%", ln=True)
-    pdf.cell(200, 10, txt=f"Porcentaje <75%: {banda_75:.1f}%", ln=True)
-    pdf.cell(200, 10, txt=f"Porcentaje ≥75%: {banda_arriba_75:.1f}%", ln=True)
 
-    tmpfile = tempfile.NamedTemporaryFile(delete=False, suffix=".pdf")
-    pdf.output(tmpfile.name)
-    with open(tmpfile.name, "rb") as f:
-        st.download_button("Descargar reporte en PDF", f.read(), file_name="reporte_sueldos.pdf", mime="application/pdf")
+    # Usar una fuente más compatible (DejaVuSans)
+    try:
+        # Descargar y usar DejaVuSans (necesitamos asegurarnos de que esté disponible)
+        pdf.set_font("DejaVu", '', 12)
+    except:
+        # Si no está disponible, usar Arial como fallback pero con limpieza de texto
+        pdf.set_font("Arial", size=12)
+
+    # Agregar logo
+    try:
+        # Guardar la imagen temporalmente para incluirla en el PDF
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".png") as tmpfile:
+            logo.save(tmpfile.name)
+            pdf.image(tmpfile.name, x=10, y=8, w=50)
+        os.unlink(tmpfile.name)  # Eliminar archivo temporal
+    except Exception as e:
+        pdf.cell(200, 10, txt="Logo no disponible", ln=True, align='C')
+
+    pdf.ln(30)
+    # Limpiar texto para evitar caracteres no soportados
+    def clean_text(text):
+        return ''.join(c for c in str(text) if ord(c) < 128)
+
+    pdf.cell(200, 10, txt=clean_text("Reporte de Sueldos - Clusterciar"), ln=True, align='C')
+    pdf.ln(10)
+    pdf.cell(200, 10, txt=clean_text(f"Total personas: {len(df_filtered)}"), ln=True)
+    pdf.cell(200, 10, txt=clean_text(f"Edad promedio: {promedio_edad:.1f} años"), ln=True)
+    pdf.cell(200, 10, txt=clean_text(f"Antigüedad promedio: {promedio_antiguedad:.1f} años"), ln=True)
+    pdf.cell(200, 10, txt=clean_text(f"Sueldo promedio: ${promedio_sueldo:,.0f}"), ln=True)
+    pdf.cell(200, 10, txt=clean_text(f"Sueldo mínimo / máximo: ${minimo_sueldo:,.0f} / ${maximo_sueldo:,.0f}"), ln=True)
+    pdf.cell(200, 10, txt=clean_text(f"Dispersión salarial: ${dispersion_sueldo:,.0f} ({dispersion_porcentaje:.1f}%)"), ln=True)
+    pdf.cell(200, 10, txt=clean_text(f"Costo laboral total: ${costo_total:,.0f}"), ln=True)
+    pdf.cell(200, 10, txt=clean_text(f"Porcentaje <25%: {banda_25:.1f}%"), ln=True)
+    pdf.cell(200, 10, txt=clean_text(f"Porcentaje <50%: {banda_50:.1f}%"), ln=True)
+    pdf.cell(200, 10, txt=clean_text(f"Porcentaje <75%: {banda_75:.1f}%"), ln=True)
+    pdf.cell(200, 10, txt=clean_text(f"Porcentaje ≥75%: {banda_arriba_75:.1f}%"), ln=True)
+
+    # Guardar PDF
+    try:
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmpfile:
+            pdf.output(tmpfile.name)
+            with open(tmpfile.name, "rb") as f:
+                st.download_button(
+                    label="Descargar reporte en PDF",
+                    data=f.read(),
+                    file_name="reporte_sueldos.pdf",
+                    mime="application/pdf"
+                )
+        os.unlink(tmpfile.name)  # Eliminar archivo temporal
+    except Exception as e:
+        st.error(f"Error al generar el PDF: {str(e)}")
 
 # Conclusión Final
 st.markdown("### Conclusión Final")
 if len(df_filtered) > 0:
     conclusion = f"""
     - Se analizaron **{len(df_filtered)}** empleados con una edad promedio de **{promedio_edad:.1f} años** y una antigüedad promedio de **{promedio_antiguedad:.1f} años**.
-    - El sueldo bruto promedio es **${promedio_sueldo:,.0f}**, con un rango de **${minimo_sueldo:,.0f}** a **${maximo_sueldo:,.0f}**, lo que indica una dispersión de **${dispersion_sueldo:,.0f} ({dispersion_porcentaje:.1f}%)**.
+    - El sueldo bruto promedio es **${promedio_sueldo:,.0f}**.
+    - El costo laboral total asciende a **${costo_total:,.0f}**.
     - La distribución de bandas salariales muestra que:
       - **{banda_25:.1f}%** está por debajo del 25% de la banda.
       - **{banda_50:.1f}%** está por debajo del 50%.
