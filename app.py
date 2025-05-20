@@ -117,7 +117,8 @@ if page == "Reporte de Sueldos":
     # Convertir columnas categóricas a string y manejar valores inválidos
     categorical_columns = [
         'Empresa', 'CCT', 'Grupo', 'Comitente', 'Puesto', 'seniority', 'Gerencia', 'CVH',
-        'Puesto_tabla_salarial', 'Locacion', 'Centro_de_Costos', 'Especialidad', 'Superior'
+        'Puesto_tabla_salarial', 'Locacion', 'Centro_de_Costos', 'Especialidad', 'Superior',
+        'PersonaApellido', 'PersonaNombre'
     ]
     for col in categorical_columns:
         if col in df.columns:
@@ -371,6 +372,33 @@ if page == "Reporte de Sueldos":
         pdf.cell(200, 10, txt=clean_text(f"Porcentaje <50%: {banda_50:.1f}%"), ln=True)
         pdf.cell(200, 10, txt=clean_text(f"Porcentaje <75%: {banda_75:.1f}%"), ln=True)
         pdf.cell(200, 10, txt=clean_text(f"Porcentaje ≥75%: {banda_arriba_75:.1f}%"), ln=True)
+
+        # Agregar cuadro con datos si hay menos de 20 personas
+        if len(df_filtered) < 20 and all(col in df_filtered.columns for col in ['PersonaApellido', 'PersonaNombre', 'Puesto', 'Seniority', 'Porcentaje_Banda_Salarial', 'Total_sueldo_bruto']):
+            pdf.ln(20)
+            pdf.set_font("Arial", size=10)
+            pdf.cell(200, 10, txt="Detalles de Personas (ordenado por Total Sueldo Bruto descendente)", ln=True, align='C')
+            pdf.ln(5)
+
+            # Crear tabla
+            columns = ['PersonaApellido', 'PersonaNombre', 'Puesto', 'Seniority', 'Porcentaje_Banda_Salarial', 'Total_sueldo_bruto']
+            df_table = df_filtered[columns].sort_values(by='Total_sueldo_bruto', ascending=False)
+            pdf.set_font("Arial", size=8)
+
+            # Encabezados de la tabla
+            for col in columns:
+                pdf.cell(33, 10, clean_text(col.replace('_', ' ').title()), border=1, align='C')
+            pdf.ln()
+
+            # Datos de la tabla
+            for index, row in df_table.iterrows():
+                pdf.cell(33, 10, clean_text(str(row['PersonaApellido'])), border=1)
+                pdf.cell(33, 10, clean_text(str(row['PersonaNombre'])), border=1)
+                pdf.cell(33, 10, clean_text(str(row['Puesto'])), border=1)
+                pdf.cell(33, 10, clean_text(str(row['Seniority'])), border=1)
+                pdf.cell(33, 10, clean_text(f"{row['Porcentaje_Banda_Salarial']*100:.1f}%"), border=1)
+                pdf.cell(35, 10, clean_text(f"${row['Total_sueldo_bruto']:,.0f}"), border=1)
+                pdf.ln()
 
         # Guardar PDF
         try:
