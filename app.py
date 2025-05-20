@@ -6,7 +6,6 @@ import io
 from PIL import Image
 from fpdf import FPDF
 import tempfile
-from datetime import datetime
 import os
 
 # Configuración de la página (debe ser la primera llamada)
@@ -101,23 +100,15 @@ page = st.sidebar.selectbox("Selecciona una página", ["Reporte de Sueldos", "Ta
 if page == "Reporte de Sueldos":
     st.title("Reporte Interactivo de Sueldos")
 
-    # Selección del dataset en la barra lateral
-    st.sidebar.header("Selección de Dataset")
-    dataset_options = {
-        "Sueldos para Informes": "SUELDOS PARA INFORMES.xlsx",
-        "Otro Excel": "OTRO_EXCEL.xlsx"
-    }
-    selected_dataset = st.sidebar.selectbox("Selecciona el archivo a analizar", list(dataset_options.keys()))
-
-    # Cargar el archivo Excel seleccionado
+    # Cargar el archivo Excel fijo (sin selección de dataset)
     @st.cache_data
-    def load_data(file_name):
-        return pd.read_excel(file_name, sheet_name=0)
+    def load_data():
+        return pd.read_excel("SUELDOS PARA INFORMES.xlsx", sheet_name=0)
 
     try:
-        df = load_data(dataset_options[selected_dataset])
+        df = load_data()
     except FileNotFoundError:
-        st.error(f"No se encontró el archivo {dataset_options[selected_dataset]}")
+        st.error("No se encontró el archivo SUELDOS PARA INFORMES.xlsx")
         st.stop()
 
     # Limpiar nombres de columnas
@@ -132,18 +123,11 @@ if page == "Reporte de Sueldos":
         if col in df.columns:
             df[col] = df[col].astype(str).replace(['#Ref', 'nan'], '')
 
-    # Convertir columnas de fecha y calcular Edad y Antigüedad si no están presentes
+    # Convertir columnas de fecha (sin calcular Edad ni Antigüedad)
     date_columns = ['Fecha_de_Ingreso', 'Fecha_de_nacimiento']
     for col in date_columns:
         if col in df.columns:
             df[col] = pd.to_datetime(df[col], errors='coerce')
-
-    # Calcular Edad y Antigüedad si no están en el Excel
-    current_date = datetime(2025, 5, 20)
-    if 'Edad' not in df.columns and 'Fecha_de_nacimiento' in df.columns:
-        df['Edad'] = (current_date - df['Fecha_de_nacimiento']).dt.days // 365
-    if 'Antigüedad' not in df.columns and 'Fecha_de_Ingreso' in df.columns:
-        df['Antigüedad'] = (current_date - df['Fecha_de_Ingreso']).dt.days // 365
 
     # Normalizar Porcentaje_Banda_Salarial (asegurar que esté entre 0 y 1)
     if 'Porcentaje_Banda_Salarial' in df.columns:
@@ -167,12 +151,10 @@ if page == "Reporte de Sueldos":
             df_filtered = df_filtered[df_filtered[key].isin(values)]
 
     # Resumen General
-    st.subheader(f"Resumen General - {selected_dataset}")
+    st.subheader("Resumen General - Sueldos para Informes")
 
     if len(df_filtered) > 0:
-        # Calcular métricas
-        promedio_edad = df_filtered['Edad'].mean() if 'Edad' in df_filtered.columns else 0
-        promedio_antiguedad = df_filtered['Antigüedad'].mean() if 'Antigüedad' in df_filtered.columns else 0
+        # Calcular métricas (sin Edad ni Antigüedad)
         promedio_sueldo = df_filtered['Total_sueldo_bruto'].mean() if 'Total_sueldo_bruto' in df_filtered.columns else 0
         minimo_sueldo = df_filtered['Total_sueldo_bruto'].min() if 'Total_sueldo_bruto' in df_filtered.columns else 0
         maximo_sueldo = df_filtered['Total_sueldo_bruto'].max() if 'Total_sueldo_bruto' in df_filtered.columns else 0
@@ -197,18 +179,16 @@ if page == "Reporte de Sueldos":
         else:
             banda_25 = banda_50 = banda_75 = banda_arriba_75 = 0
 
-        # Métricas en columnas
+        # Métricas en columnas (sin Edad ni Antigüedad)
         col1, col2, col3, col4 = st.columns(4)
         col1.metric("Total Personas", len(df_filtered))
-        col2.metric("Edad Promedio", f"{promedio_edad:.1f} años")
-        col3.metric("Antigüedad Promedio", f"{promedio_antiguedad:.1f} años")
-        col4.metric("Sueldo Bruto Promedio", f"${promedio_sueldo:,.0f}")
+        col2.metric("Sueldo Bruto Promedio", f"${promedio_sueldo:,.0f}")
+        col3.metric("Sueldo Mínimo", f"${minimo_sueldo:,.0f}")
+        col4.metric("Sueldo Máximo", f"${maximo_sueldo:,.0f}")
 
-        col5, col6, col7, col8 = st.columns(4)
-        col5.metric("Sueldo Mínimo", f"${minimo_sueldo:,.0f}")
-        col6.metric("Sueldo Máximo", f"${maximo_sueldo:,.0f}")
-        col7.metric("Dispersión Salarial", f"${dispersion_sueldo:,.0f} ({dispersion_porcentaje:.1f}%)")
-        col8.metric("Costo Laboral Total", f"${costo_total:,.0f}")
+        col5, col6 = st.columns(2)
+        col5.metric("Dispersión Salarial", f"${dispersion_sueldo:,.0f} ({dispersion_porcentaje:.1f}%)")
+        col6.metric("Costo Laboral Total", f"${costo_total:,.0f}")
 
         # Distribución de Especialidad
         if 'Especialidad' in df_filtered.columns:
@@ -248,7 +228,7 @@ if page == "Reporte de Sueldos":
 
     else:
         st.info("No hay datos disponibles con los filtros actuales.")
-        promedio_edad = promedio_antiguedad = promedio_sueldo = minimo_sueldo = maximo_sueldo = dispersion_sueldo = dispersion_porcentaje = costo_total = 0
+        promedio_sueldo = minimo_sueldo = maximo_sueldo = dispersion_sueldo = dispersion_porcentaje = costo_total = 0
         banda_25 = banda_50 = banda_75 = banda_arriba_75 = 0
         especialidad_dist = pd.DataFrame()
 
@@ -329,7 +309,7 @@ if page == "Reporte de Sueldos":
     st.download_button(
         label="Descargar datos filtrados como CSV",
         data=csv,
-        file_name=f'sueldos_filtrados_{selected_dataset.lower().replace(" ", "_")}.csv',
+        file_name='sueldos_filtrados.csv',
         mime='text/csv',
     )
 
@@ -339,8 +319,6 @@ if page == "Reporte de Sueldos":
         df_filtered.to_excel(writer, index=False, sheet_name='Datos Filtrados')
         resumen = pd.DataFrame({
             'Total_personas': [len(df_filtered)],
-            'Edad_Promedio': [promedio_edad],
-            'Antigüedad_Promedio': [promedio_antiguedad],
             'Sueldo_Promedio': [promedio_sueldo],
             'Sueldo_Mínimo': [minimo_sueldo],
             'Sueldo_Máximo': [maximo_sueldo],
@@ -356,7 +334,7 @@ if page == "Reporte de Sueldos":
     st.download_button(
         label="Descargar reporte en Excel",
         data=excel_data,
-        file_name=f'reporte_sueldos_{selected_dataset.lower().replace(" ", "_")}.xlsx',
+        file_name='reporte_sueldos.xlsx',
         mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     )
 
@@ -382,11 +360,9 @@ if page == "Reporte de Sueldos":
         def clean_text(text):
             return ''.join(c for c in str(text) if ord(c) < 128)
 
-        pdf.cell(200, 10, txt=clean_text(f"Reporte de Sueldos - {selected_dataset}"), ln=True, align='C')
+        pdf.cell(200, 10, txt=clean_text("Reporte de Sueldos - Sueldos para Informes"), ln=True, align='C')
         pdf.ln(10)
         pdf.cell(200, 10, txt=clean_text(f"Total personas: {len(df_filtered)}"), ln=True)
-        pdf.cell(200, 10, txt=clean_text(f"Edad promedio: {promedio_edad:.1f} años"), ln=True)
-        pdf.cell(200, 10, txt=clean_text(f"Antigüedad promedio: {promedio_antiguedad:.1f} años"), ln=True)
         pdf.cell(200, 10, txt=clean_text(f"Sueldo promedio: ${promedio_sueldo:,.0f}"), ln=True)
         pdf.cell(200, 10, txt=clean_text(f"Sueldo mínimo / máximo: ${minimo_sueldo:,.0f} / ${maximo_sueldo:,.0f}"), ln=True)
         pdf.cell(200, 10, txt=clean_text(f"Dispersión salarial: ${dispersion_sueldo:,.0f} ({dispersion_porcentaje:.1f}%)"), ln=True)
@@ -404,7 +380,7 @@ if page == "Reporte de Sueldos":
                     st.download_button(
                         label="Descargar reporte en PDF",
                         data=f.read(),
-                        file_name=f"reporte_sueldos_{selected_dataset.lower().replace(' ', '_')}.pdf",
+                        file_name="reporte_sueldos.pdf",
                         mime="application/pdf"
                     )
             os.unlink(tmpfile.name)
@@ -415,7 +391,7 @@ if page == "Reporte de Sueldos":
     st.markdown("### Conclusión Final")
     if len(df_filtered) > 0:
         conclusion = f"""
-        - Se analizaron **{len(df_filtered)}** empleados con una edad promedio de **{promedio_edad:.1f} años** y una antigüedad promedio de **{promedio_antiguedad:.1f} años**.
+        - Se analizaron **{len(df_filtered)}** empleados.
         - El sueldo bruto promedio es **${promedio_sueldo:,.0f}**.
         - El costo laboral total asciende a **${costo_total:,.0f}**.
         - La distribución de bandas salariales muestra que:
@@ -453,47 +429,91 @@ elif page == "Tabla Salarial":
     seniorities = sorted(df_tabla['Seniority'].unique())
     locaciones = sorted(df_tabla['Locacion'].unique())
 
-    # Selección de Puesto, Seniority y Locación
+    # Comparativa: Selección de dos combinaciones
+    st.subheader("Comparativa de Valores Salariales")
+
+    # Primera selección
+    st.markdown("**Primera Selección**")
     col1, col2, col3 = st.columns(3)
     with col1:
-        selected_puesto = st.selectbox("Selecciona un Puesto", puestos)
+        selected_puesto_1 = st.selectbox("Selecciona un Puesto (1)", puestos, key="puesto_1")
     with col2:
-        selected_seniority = st.selectbox("Selecciona un Seniority", seniorities)
+        selected_seniority_1 = st.selectbox("Selecciona un Seniority (1)", seniorities, key="seniority_1")
     with col3:
-        selected_locacion = st.selectbox("Selecciona una Locación", locaciones)
+        selected_locacion_1 = st.selectbox("Selecciona una Locación (1)", locaciones, key="locacion_1")
 
-    # Filtrar los datos según la selección
-    df_selected = df_tabla[
-        (df_tabla['Puesto'] == selected_puesto) &
-        (df_tabla['Seniority'] == selected_seniority) &
-        (df_tabla['Locacion'] == selected_locacion)
+    # Filtrar datos para la primera selección
+    df_selected_1 = df_tabla[
+        (df_tabla['Puesto'] == selected_puesto_1) &
+        (df_tabla['Seniority'] == selected_seniority_1) &
+        (df_tabla['Locacion'] == selected_locacion_1)
     ]
 
-    # Mostrar los valores Q1 a Q5
-    if not df_selected.empty:
-        st.subheader(f"Valores Salariales para {selected_puesto} - {selected_seniority} - {selected_locacion}")
-        valores = df_selected[['Q1', 'Q2', 'Q3', 'Q4', 'Q5']].iloc[0]
+    # Mostrar valores de la primera selección
+    if not df_selected_1.empty:
+        st.markdown(f"**Valores Salariales para {selected_puesto_1} - {selected_seniority_1} - {selected_locacion_1}**")
+        valores_1 = df_selected_1[['Q1', 'Q2', 'Q3', 'Q4', 'Q5']].iloc[0]
         col1, col2, col3, col4, col5 = st.columns(5)
-        col1.metric("Q1", f"${valores['Q1']:,.0f}")
-        col2.metric("Q2", f"${valores['Q2']:,.0f}")
-        col3.metric("Q3", f"${valores['Q3']:,.0f}")
-        col4.metric("Q4", f"${valores['Q4']:,.0f}")
-        col5.metric("Q5", f"${valores['Q5']:,.0f}")
-
-        # Gráfico de barras para visualizar Q1 a Q5
-        st.markdown("### Visualización de Rangos Salariales")
-        df_plot = pd.DataFrame({
-            'Quintil': ['Q1', 'Q2', 'Q3', 'Q4', 'Q5'],
-            'Sueldo': [valores['Q1'], valores['Q2'], valores['Q3'], valores['Q4'], valores['Q5']]
-        })
-        chart = alt.Chart(df_plot).mark_bar().encode(
-            x=alt.X('Quintil:N', title='Quintil'),
-            y=alt.Y('Sueldo:Q', title='Sueldo ($)'),
-            tooltip=[alt.Tooltip('Quintil:N'), alt.Tooltip('Sueldo:Q', format=",.0f")]
-        ).properties(width=400, height=300)
-        st.altair_chart(chart, use_container_width=True)
+        col1.metric("Q1", f"${valores_1['Q1']:,.0f}")
+        col2.metric("Q2", f"${valores_1['Q2']:,.0f}")
+        col3.metric("Q3", f"${valores_1['Q3']:,.0f}")
+        col4.metric("Q4", f"${valores_1['Q4']:,.0f}")
+        col5.metric("Q5", f"${valores_1['Q5']:,.0f}")
     else:
-        st.warning(f"No se encontraron datos para {selected_puesto} con Seniority {selected_seniority} en Locación {selected_locacion}.")
+        st.warning(f"No se encontraron datos para {selected_puesto_1} con Seniority {selected_seniority_1} en Locación {selected_locacion_1}.")
+        valores_1 = None
+
+    # Segunda selección
+    st.markdown("**Segunda Selección**")
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        selected_puesto_2 = st.selectbox("Selecciona un Puesto (2)", puestos, key="puesto_2")
+    with col2:
+        selected_seniority_2 = st.selectbox("Selecciona un Seniority (2)", seniorities, key="seniority_2")
+    with col3:
+        selected_locacion_2 = st.selectbox("Selecciona una Locación (2)", locaciones, key="locacion_2")
+
+    # Filtrar datos para la segunda selección
+    df_selected_2 = df_tabla[
+        (df_tabla['Puesto'] == selected_puesto_2) &
+        (df_tabla['Seniority'] == selected_seniority_2) &
+        (df_tabla['Locacion'] == selected_locacion_2)
+    ]
+
+    # Mostrar valores de la segunda selección
+    if not df_selected_2.empty:
+        st.markdown(f"**Valores Salariales para {selected_puesto_2} - {selected_seniority_2} - {selected_locacion_2}**")
+        valores_2 = df_selected_2[['Q1', 'Q2', 'Q3', 'Q4', 'Q5']].iloc[0]
+        col1, col2, col3, col4, col5 = st.columns(5)
+        col1.metric("Q1", f"${valores_2['Q1']:,.0f}")
+        col2.metric("Q2", f"${valores_2['Q2']:,.0f}")
+        col3.metric("Q3", f"${valores_2['Q3']:,.0f}")
+        col4.metric("Q4", f"${valores_2['Q4']:,.0f}")
+        col5.metric("Q5", f"${valores_2['Q5']:,.0f}")
+    else:
+        st.warning(f"No se encontraron datos para {selected_puesto_2} con Seniority {selected_seniority_2} en Locación {selected_locacion_2}.")
+        valores_2 = None
+
+    # Calcular y mostrar el porcentaje de diferencia
+    if valores_1 is not None and valores_2 is not None:
+        st.markdown("### Comparativa de Sueldos")
+        # Calcular promedio de Q1 a Q5 para ambas selecciones
+        promedio_1 = valores_1[['Q1', 'Q2', 'Q3', 'Q4', 'Q5']].mean()
+        promedio_2 = valores_2[['Q1', 'Q2', 'Q3', 'Q4', 'Q5']].mean()
+        # Calcular porcentaje de diferencia
+        if promedio_1 != 0:
+            porcentaje_diferencia = ((promedio_2 - promedio_1) / promedio_1) * 100
+            st.markdown(f"**Diferencia porcentual (basada en el promedio de Q1-Q5):** {porcentaje_diferencia:.2f}%")
+            if porcentaje_diferencia > 0:
+                st.write(f"El promedio de la segunda selección es {porcentaje_diferencia:.2f}% mayor que el de la primera.")
+            elif porcentaje_diferencia < 0:
+                st.write(f"El promedio de la segunda selección es {abs(porcentaje_diferencia):.2f}% menor que el de la primera.")
+            else:
+                st.write("No hay diferencia entre los promedios de las dos selecciones.")
+        else:
+            st.warning("No se puede calcular el porcentaje de diferencia porque el promedio de la primera selección es 0.")
+    elif valores_1 is None or valores_2 is None:
+        st.warning("No se puede calcular la diferencia porque una o ambas selecciones no tienen datos.")
 
     # Opción para descargar la tabla salarial completa
     csv = df_tabla.to_csv(index=False).encode('utf-8')
