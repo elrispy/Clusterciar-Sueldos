@@ -448,29 +448,30 @@ elif page == "Tabla Salarial":
     # Limpiar nombres de columnas
     df_tabla.columns = df_tabla.columns.str.strip().str.replace(' ', '_')
 
-    # Filtrar solo para Locacion = OCN (ya que OCBA tiene valores 0)
-    df_tabla = df_tabla[df_tabla['Locacion'] == 'OCN']
-
-    # Obtener listas únicas de Puesto y Seniority
+    # Obtener listas únicas de Puesto, Seniority y Locación
     puestos = sorted(df_tabla['Puesto'].unique())
     seniorities = sorted(df_tabla['Seniority'].unique())
+    locaciones = sorted(df_tabla['Locacion'].unique())
 
-    # Selección de Puesto y Seniority
-    col1, col2 = st.columns(2)
+    # Selección de Puesto, Seniority y Locación
+    col1, col2, col3 = st.columns(3)
     with col1:
         selected_puesto = st.selectbox("Selecciona un Puesto", puestos)
     with col2:
         selected_seniority = st.selectbox("Selecciona un Seniority", seniorities)
+    with col3:
+        selected_locacion = st.selectbox("Selecciona una Locación", locaciones)
 
     # Filtrar los datos según la selección
     df_selected = df_tabla[
         (df_tabla['Puesto'] == selected_puesto) &
-        (df_tabla['Seniority'] == selected_seniority)
+        (df_tabla['Seniority'] == selected_seniority) &
+        (df_tabla['Locacion'] == selected_locacion)
     ]
 
     # Mostrar los valores Q1 a Q5
     if not df_selected.empty:
-        st.subheader(f"Valores Salariales para {selected_puesto} - {selected_seniority}")
+        st.subheader(f"Valores Salariales para {selected_puesto} - {selected_seniority} - {selected_locacion}")
         valores = df_selected[['Q1', 'Q2', 'Q3', 'Q4', 'Q5']].iloc[0]
         col1, col2, col3, col4, col5 = st.columns(5)
         col1.metric("Q1", f"${valores['Q1']:,.0f}")
@@ -492,7 +493,7 @@ elif page == "Tabla Salarial":
         ).properties(width=400, height=300)
         st.altair_chart(chart, use_container_width=True)
     else:
-        st.warning(f"No se encontraron datos para {selected_puesto} con Seniority {selected_seniority} en Locacion OCN.")
+        st.warning(f"No se encontraron datos para {selected_puesto} con Seniority {selected_seniority} en Locación {selected_locacion}.")
 
     # Opción para descargar la tabla salarial completa
     csv = df_tabla.to_csv(index=False).encode('utf-8')
