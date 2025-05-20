@@ -9,6 +9,9 @@ import tempfile
 from datetime import datetime
 import os
 
+# Configuración de la página (debe ser la primera llamada)
+st.set_page_config(page_title="Reporte de Sueldos", layout="wide")
+
 # CSS personalizado con fuente Red Hat Display y diseño responsive
 st.markdown(
     """
@@ -82,9 +85,6 @@ st.markdown(
     """,
     unsafe_allow_html=True
 )
-
-# Configuración de la página
-st.set_page_config(page_title="Reporte de Sueldos", layout="wide")
 
 # Cargar logo
 try:
