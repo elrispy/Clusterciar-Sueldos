@@ -1,3 +1,4 @@
+```python
 import streamlit as st
 import pandas as pd
 import numpy as np
@@ -94,153 +95,7 @@ except FileNotFoundError:
 
 # Menú principal para seleccionar la página
 st.sidebar.header("Menú Principal")
-page = st.sidebar.selectbox("Selecciona una página", ["Reporte de Sueldos", "Tabla Salarial"])
-
-# --- Página: Reporte de Sueldos ---
-if page == "Reporte de Sueldos":
-    st.title("Reporte Interactivo de Sueldos")
-
-    # Cargar el archivo Excel fijo (sin selección de dataset)
-    @st.cache_data
-    def load_data():
-        return pd.read_excel("SUELDOS PARA INFORMES.xlsx", sheet_name=0)
-
-    try:
-        df = load_data()
-    except FileNotFoundError:
-        st.error("No se encontró el archivo SUELDOS PARA INFORMES.xlsx")
-        st.stop()
-
-    # Limpiar nombres de columnas
-    df.columns = df.columns.str.strip().str.replace(' ', '_').str.replace('%_BANDA_SALARIAL', 'Porcentaje_Banda_Salarial')
-
-    # Convertir columnas categóricas a string y manejar valores inválidos
-    categorical_columns = [
-        'Empresa', 'CCT', 'Grupo', 'Comitente', 'Puesto', 'seniority', 'Gerencia', 'CVH',
-        'Puesto_tabla_salarial', 'Locacion', 'Centro_de_Costos', 'Especialidad', 'Superior',
-        'PersonaApellido', 'PersonaNombre'
-    ]
-    for col in categorical_columns:
-        if col in df.columns:
-            df[col] = df[col].astype(str).replace(['#Ref', 'nan'], '')
-
-    # Convertir columnas de fecha (sin calcular Edad ni Antigüedad)
-    date_columns = ['Fecha_de_Ingreso', 'Fecha_de_nacimiento']
-    for col in date_columns:
-        if col in df.columns:
-            df[col] = pd.to_datetime(df[col], errors='coerce')
-
-    # Normalizar Porcentaje_Banda_Salarial (asegurar que esté entre 0 y 1)
-    if 'Porcentaje_Banda_Salarial' in df.columns:
-        df['Porcentaje_Banda_Salarial'] = pd.to_numeric(df['Porcentaje_Banda_Salarial'], errors='coerce')
-        df['Porcentaje_Banda_Salarial'] = df['Porcentaje_Banda_Salarial'].apply(lambda x: x / 100 if x > 1 else x)
-
-    # Filtros en la barra lateral
-    st.sidebar.header("Filtros")
-    filtros = {}
-    for col in ['Empresa', 'CCT', 'Grupo', 'Comitente', 'Puesto', 'seniority', 'Gerencia', 'CVH',
-                'Puesto_tab Evidently, the code was truncated in the previous message. Below is the complete updated version of `app.py` with the requested changes, including the option to download the table as an Excel file in the "Tabla Salarial" menu.
-
-### Código Actualizado para `app.py`
-
-<xaiArtifact artifact_id="2de336b6-73bd-47f4-a360-c11c0881a505" artifact_version_id="82c029f8-f39c-4263-b128-3b572d6be409" title="app.py" contentType="text/python">
-import streamlit as st
-import pandas as pd
-import numpy as np
-import altair as alt
-import io
-from PIL import Image
-from fpdf import FPDF
-import tempfile
-import os
-
-# Configuración de la página (debe ser la primera llamada)
-st.set_page_config(page_title="Reporte de Sueldos", layout="wide")
-
-# CSS personalizado con fuente Red Hat Display y diseño responsive
-st.markdown(
-    """
-    <style>
-    @import url('https://fonts.googleapis.com/css2?family=Red+Hat+Display:wght@400;500;700&display=swap');
-
-    /* Aplicar Red Hat Display a todos los elementos */
-    * {
-        font-family: 'Red Hat Display', sans-serif !important;
-    }
-
-    /* Estilo general */
-    .stApp {
-        max-width: 100%;
-        margin: 0 auto;
-    }
-
-    /* Menú lateral responsive */
-    .sidebar .sidebar-content {
-        padding: 10px;
-    }
-    @media (max-width: 768px) {
-        .sidebar .sidebar-content {
-            width: 100%;
-            position: relative;
-            height: auto;
-            padding: 5px;
-        }
-        .sidebar .sidebar-content .stSelectbox {
-            width: 90%;
-            margin: 5px auto;
-        }
-        .sidebar .sidebar-content .stButton {
-            width: 90%;
-            margin: 5px auto;
-        }
-        .stApp [data-testid="stSidebar"] {
-            width: 100% !important;
-            position: relative;
-        }
-        /* Apilar columnas en móviles */
-        .css-1d8v2e5 {
-            flex-direction: column !important;
-        }
-        .css-1d8v2e5 > div {
-            width: 100% !important;
-            margin-bottom: 10px;
-        }
-        /* Ajustar tamaño de texto y gráficos */
-        .stMetric {
-            font-size: 14px !important;
-        }
-        .stMarkdown {
-            font-size: 16px !important;
-        }
-        .altair-chart {
-            width: 100% !important;
-            height: auto !important;
-        }
-        /* Botones y selectores más grandes para touch */
-        .stButton>button {
-            padding: 10px 20px;
-            font-size: 16px;
-        }
-        .stSelectbox>select {
-            padding: 10px;
-            font-size: 16px;
-        }
-    }
-    </style>
-    """,
-    unsafe_allow_html=True
-)
-
-# Cargar logo
-try:
-    logo = Image.open("logo-clusterciar.png")
-    st.image(logo, width=200)
-except FileNotFoundError:
-    st.warning("No se encontró el archivo logo-clusterciar.png")
-
-# Menú principal para seleccionar la página
-st.sidebar.header("Menú Principal")
-page = st.sidebar.selectbox("Selecciona una página", ["Reporte de Sueldos", "Tabla Salarial"])
+page = st.sidebar.selectbox("Selecciona una página", ["Reporte de Sueldos", "Tabla Salarial", "Análisis de Legajos"])
 
 # --- Página: Reporte de Sueldos ---
 if page == "Reporte de Sueldos":
@@ -694,7 +549,7 @@ elif page == "Tabla Salarial":
     col1, col2 = st.columns(2)
     
     with col1:
-        # Descarga como CSV (existente)
+        # Descarga como CSV
         csv = df_tabla.to_csv(index=False).encode('utf-8')
         st.download_button(
             label="Descargar tabla salarial completa como CSV",
@@ -704,7 +559,7 @@ elif page == "Tabla Salarial":
         )
 
     with col2:
-        # Descarga como Excel (nuevo)
+        # Descarga como Excel
         output = io.BytesIO()
         with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
             df_tabla.to_excel(writer, index=False, sheet_name='Tabla Salarial')
@@ -715,3 +570,79 @@ elif page == "Tabla Salarial":
             file_name='tabla_salarial.xlsx',
             mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
         )
+
+# --- Página: Análisis de Legajos ---
+elif page == "Análisis de Legajos":
+    st.title("Análisis de Legajos")
+
+    # Cargar el archivo de análisis de legajos
+    @st.cache_data
+    def load_analisis_legajos():
+        return pd.read_excel("analisis_legajos.xlsx", sheet_name=0)
+
+    try:
+        df_legajos = load_analisis_legajos()
+    except FileNotFoundError:
+        st.error("No se encontró el archivo analisis_legajos.xlsx")
+        st.stop()
+
+    # Limpiar nombres de columnas
+    df_legajos.columns = df_legajos.columns.str.strip().str.replace(' ', '_')
+
+    # Convertir columnas categóricas a string y manejar valores inválidos
+    categorical_columns = [col for col in df_legajos.columns if df_legajos[col].dtype == 'object']
+    for col in categorical_columns:
+        df_legajos[col] = df_legajos[col].astype(str).replace(['#Ref', 'nan'], '')
+
+    # Convertir columnas de fecha
+    date_columns = [col for col in df_legajos.columns if 'fecha' in col.lower() or 'date' in col.lower()]
+    for col in date_columns:
+        df_legajos[col] = pd.to_datetime(df_legajos[col], errors='coerce')
+
+    # Filtros en la barra lateral
+    st.sidebar.header("Filtros")
+    filtros = {}
+    for col in categorical_columns:
+        if col in df_legajos.columns:
+            filtros[col] = st.sidebar.multiselect(col.replace('_', ' ').title(), df_legajos[col].unique())
+        else:
+            filtros[col] = []
+
+    # Aplicar filtros
+    df_filtered = df_legajos.copy()
+    for key, values in filtros.items():
+        if values:
+            df_filtered = df_filtered[df_filtered[key].isin(values)]
+
+    # Resumen General
+    st.subheader("Resumen General - Análisis de Legajos")
+    if len(df_filtered) > 0:
+        st.metric("Total Registros", len(df_filtered))
+    else:
+        st.info("No hay datos disponibles con los filtros actuales.")
+
+    # Tabla de datos filtrados
+    st.subheader("Tabla de Datos Filtrados")
+    st.dataframe(df_filtered)
+
+    # Exportar a CSV
+    csv = df_filtered.to_csv(index=False).encode('utf-8')
+    st.download_button(
+        label="Descargar datos filtrados como CSV",
+        data=csv,
+        file_name='analisis_legajos_filtrados.csv',
+        mime='text/csv',
+    )
+
+    # Exportar a Excel
+    output = io.BytesIO()
+    with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+        df_filtered.to_excel(writer, index=False, sheet_name='Datos Filtrados')
+    excel_data = output.getvalue()
+    st.download_button(
+        label="Descargar datos filtrados como Excel",
+        data=excel_data,
+        file_name='analisis_legajos_filtrados.xlsx',
+        mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    )
+```
