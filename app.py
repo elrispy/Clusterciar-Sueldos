@@ -576,8 +576,8 @@ elif page == "Análisis de Legajos":
 
     # Cargar el archivo de análisis de legajos
     @st.cache_data
-    def load_analisis_legajos():
-        return pd.read_excel("Análisis de Legajos.xlsx", sheet_name=0)
+def load_analisis_legajos():
+    return pd.read_excel("analisis_legajos.xlsx", sheet_name=0)
 
     try:
         df_legajos = load_analisis_legajos()
