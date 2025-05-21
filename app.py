@@ -577,12 +577,12 @@ elif page == "Análisis de Legajos":
     # Cargar el archivo de análisis de legajos
     @st.cache_data
     def load_analisis_legajos():
-        return pd.read_excel("Analisis legajos.xlsx", sheet_name=0)
+        return pd.read_excel("Análisis de legajos.xlsx", sheet_name=0)
 
     try:
         df_legajos = load_analisis_legajos()
     except FileNotFoundError:
-        st.error("No se encontró el archivo Análisis de Legajos.xlsx")
+        st.error("No se encontró el archivo Análisis de legajos.xlsx")
         st.stop()
 
     # Limpiar nombres de columnas
