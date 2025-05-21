@@ -1,4 +1,3 @@
-```python
 import streamlit as st
 import pandas as pd
 import numpy as np
@@ -645,4 +644,3 @@ elif page == "Análisis de Legajos":
         file_name='analisis_legajos_filtrados.xlsx',
         mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     )
-```
