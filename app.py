@@ -574,13 +574,16 @@ elif page == "Tabla Salarial":
 elif page == "Análisis de Legajos":
     st.title("Análisis de Legajos")
 
-    # Cargar el archivo de analisis legajos
+    # Cargar el archivo de análisis de legajos
     @st.cache_data
     def load_analisis_legajos():
-        return pd.read_excel("analisis_legajos.xlsx", sheet_name=0)
+        return pd.read_excel("Análisis de Legajos.xlsx", sheet_name=0)
 
     try:
         df_legajos = load_analisis_legajos()
+    except FileNotFoundError:
+        st.error("No se encontró el archivo Análisis de Legajos.xlsx")
+        st.stop()
 
     # Limpiar nombres de columnas
     df_legajos.columns = df_legajos.columns.str.strip().str.replace(' ', '_')
