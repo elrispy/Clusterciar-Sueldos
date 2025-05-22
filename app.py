@@ -94,7 +94,7 @@ except FileNotFoundError:
 
 # Menú principal para seleccionar la página
 st.sidebar.header("Menú Principal")
-page = st.sidebar.selectbox("Selecciona una página", ["Reporte de Sueldos", "Tabla Salarial", "Análisis de Legajos", "Comparar Personas"])
+page = st.sidebar.selectbox("Selecciona una página", ["Reporte de Sueldos", "Tabla Salarial", "Análisis de Legajos", "Comparar Personas", "Sueldos"])
 
 # --- Página: Reporte de Sueldos ---
 if page == "Reporte de Sueldos":
@@ -831,3 +831,111 @@ elif page == "Comparar Personas":
             st.dataframe(df_filtered[display_columns])
         else:
             st.warning("No hay datos disponibles para comparar con los filtros seleccionados.")
+
+# --- Página: Sueldos ---
+elif page == "Sueldos":
+    st.title("Reporte de Sueldos")
+
+    # Cargar el archivo Excel "sueldos.xlsx"
+    @st.cache_data
+    def load_sueldos_data():
+        return pd.read_excel("sueldos.xlsx", sheet_name=0)
+
+    try:
+        df = load_sueldos_data()
+    except FileNotFoundError:
+        st.error("No se encontró el archivo sueldos.xlsx")
+        st.stop()
+
+    # Limpiar nombres de columnas
+    df.columns = df.columns.str.strip().str.replace(' ', '_').str.lower()
+
+    # Renombrar ConvenioCategoria a Categoría
+    if 'conveniocategoria' in df.columns:
+        df = df.rename(columns={'conveniocategoria': 'categoria'})
+
+    # Convertir columnas categóricas a string y manejar valores inválidos
+    categorical_columns = ['empresa', 'comitente', 'es_cvh', 'locacion', 'puesto', 'categoria', 'convenio', 'centro_de_costo']
+    for col in categorical_columns:
+        if col in df.columns:
+            df[col] = df[col].astype(str).replace(['#Ref', 'nan'], '')
+
+    # Convertir columnas numéricas a float y manejar valores inválidos
+    numeric_columns = ['total_remunerativo', 'total_no_remunerativo', 'total_sueldo_bruto', 'total_descuentos', 'neto', 'total_contribuciones', 'provision_sac']
+    for col in numeric_columns:
+        if col in df.columns:
+            df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
+
+    # Calcular Total Costo Laboral
+    df['total_costo_laboral'] = df['total_sueldo_bruto'] + df['total_contribuciones'] + df['provision_sac']
+
+    # Filtros en la barra lateral
+    st.sidebar.header("Filtros")
+    filtros = {}
+    for col in categorical_columns:
+        if col in df.columns:
+            filtros[col] = st.sidebar.multiselect(col.replace('_', ' ').title(), df[col].unique())
+        else:
+            filtros[col] = []
+
+    # Aplicar filtros
+    df_filtered = df.copy()
+    for key, values in filtros.items():
+        if values:
+            df_filtered = df_filtered[df_filtered[key].isin(values)]
+
+    # Resumen General
+    st.subheader("Resumen General - Sueldos")
+    if len(df_filtered) > 0:
+        # Calcular métricas
+        total_remunerativo = df_filtered['total_remunerativo'].sum()
+        total_no_remunerativo = df_filtered['total_no_remunerativo'].sum()
+        total_sueldo_bruto = df_filtered['total_sueldo_bruto'].sum()
+        total_descuentos = df_filtered['total_descuentos'].sum()
+        neto = df_filtered['neto'].sum()
+        total_costo_laboral = df_filtered['total_costo_laboral'].sum()
+
+        # Mostrar métricas
+        col1, col2, col3 = st.columns(3)
+        col1.metric("Total Remunerativo", f"${total_remunerativo:,.0f}")
+        col2.metric("Total No Remunerativo", f"${total_no_remunerativo:,.0f}")
+        col3.metric("Total Sueldo Bruto", f"${total_sueldo_bruto:,.0f}")
+
+        col4, col5, col6 = st.columns(3)
+        col4.metric("Total Descuentos", f"${total_descuentos:,.0f}")
+        col5.metric("Neto", f"${neto:,.0f}")
+        col6.metric("Total Costo Laboral", f"${total_costo_laboral:,.0f}")
+
+        # Tabla de datos filtrados
+        st.subheader("Tabla de Datos Filtrados")
+        display_columns = ['empresa', 'comitente', 'es_cvh', 'locacion', 'puesto', 'categoria', 'convenio', 'centro_de_costo', 'total_remunerativo', 'total_no_remunerativo', 'total_sueldo_bruto', 'total_descuentos', 'neto', 'total_costo_laboral']
+        st.dataframe(df_filtered[display_columns].rename(columns={
+            'empresa': 'Empresa', 'comitente': 'Comitente', 'es_cvh': 'Es CVH', 'locacion': 'Locación',
+            'puesto': 'Puesto', 'categoria': 'Categoría', 'convenio': 'Convenio', 'centro_de_costo': 'Centro de Costo',
+            'total_remunerativo': 'Total Remunerativo', 'total_no_remunerativo': 'Total No Remunerativo',
+            'total_sueldo_bruto': 'Total Sueldo Bruto', 'total_descuentos': 'Total Descuentos',
+            'neto': 'Neto', 'total_costo_laboral': 'Total Costo Laboral'
+        }))
+
+        # Exportar a CSV
+        csv = df_filtered.to_csv(index=False).encode('utf-8')
+        st.download_button(
+            label="Descargar datos filtrados como CSV",
+            data=csv,
+            file_name='sueldos_filtrados.csv',
+            mime='text/csv',
+        )
+
+        # Exportar a Excel
+        output = io.BytesIO()
+        with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+            df_filtered.to_excel(writer, index=False, sheet_name='Datos Filtrados')
+        excel_data = output.getvalue()
+        st.download_button(
+            label="Descargar datos filtrados como Excel",
+            data=excel_data,
+            file_name='sueldos_filtrados.xlsx',
+            mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        )
+    else:
+        st.info("No hay datos disponibles con los filtros actuales.")
