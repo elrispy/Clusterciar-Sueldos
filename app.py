@@ -700,17 +700,20 @@ elif page == "Comparar Personas":
         if col in df.columns:
             df[col] = df[col].astype(str).replace(['#Ref', 'nan'], '')
 
-    # Filtros previos: Gerencia, Puesto y Seniority
+    # Filtros previos: Gerencia, Puesto_tabla_salarial, Grupo y Seniority
     st.subheader("Filtros Previos")
 
-    col1, col2, col3 = st.columns(3)
+    col1, col2, col3, col4 = st.columns(4)
     with col1:
         gerencias = ['Todas'] + sorted(df['Gerencia'].unique())
         selected_gerencia = st.selectbox("Selecciona una Gerencia", gerencias)
     with col2:
-        puestos = ['Todos'] + sorted(df['Puesto'].unique())
-        selected_puesto = st.selectbox("Selecciona un Puesto", puestos)
+        puestos = ['Todos'] + sorted(df['Puesto_tabla_salarial'].unique())
+        selected_puesto = st.selectbox("Selecciona un Puesto Tabla Salarial", puestos)
     with col3:
+        grupos = ['Todos'] + sorted(df['Grupo'].unique())
+        selected_grupo = st.selectbox("Selecciona un Grupo", grupos)
+    with col4:
         seniorities = ['Todos'] + sorted(df['seniority'].unique())
         selected_seniority = st.selectbox("Selecciona un Seniority", seniorities)
 
@@ -719,7 +722,9 @@ elif page == "Comparar Personas":
     if selected_gerencia != 'Todas':
         df_filtered = df_filtered[df_filtered['Gerencia'] == selected_gerencia]
     if selected_puesto != 'Todos':
-        df_filtered = df_filtered[df_filtered['Puesto'] == selected_puesto]
+        df_filtered = df_filtered[df_filtered['Puesto_tabla_salarial'] == selected_puesto]
+    if selected_grupo != 'Todos':
+        df_filtered = df_filtered[df_filtered['Grupo'] == selected_grupo]
     if selected_seniority != 'Todos':
         df_filtered = df_filtered[df_filtered['seniority'] == selected_seniority]
 
