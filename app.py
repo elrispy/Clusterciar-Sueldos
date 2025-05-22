@@ -733,54 +733,101 @@ elif page == "Comparar Personas":
         st.warning("No hay datos disponibles con los filtros seleccionados. Por favor, ajusta los filtros.")
         st.stop()
 
-    # Selección de personas para comparar (basado en el DataFrame filtrado)
-    apellidos = sorted(df_filtered['Personaapellido'].unique())
-    st.subheader("Selecciona dos personas para comparar")
+    # Selección para comparar
+    st.subheader("Selección para comparar")
 
-    col1, col2 = st.columns(2)
-    with col1:
-        persona_1 = st.selectbox("Selecciona el primer apellido", apellidos, key="persona_1")
-    with col2:
-        persona_2 = st.selectbox("Selecciona el segundo apellido", apellidos, key="persona_2")
+    # Opción para elegir el tipo de comparación
+    comparison_type = st.selectbox(
+        "Tipo de comparación",
+        ["Comparar dos personas", "Comparar todas las personas filtradas"]
+    )
 
-    # Filtrar datos para las personas seleccionadas (usando el DataFrame original para mantener todas las columnas)
-    df_persona_1 = df[df['Personaapellido'] == persona_1]
-    df_persona_2 = df[df['Personaapellido'] == persona_2]
+    if comparison_type == "Comparar dos personas":
+        # Selección de personas para comparar (basado en el DataFrame filtrado)
+        apellidos = sorted(df_filtered['Personaapellido'].unique())
+        
+        col1, col2 = st.columns(2)
+        with col1:
+            persona_1 = st.selectbox("Selecciona el primer apellido", apellidos, key="persona_1")
+        with col2:
+            persona_2 = st.selectbox("Selecciona el segundo apellido", apellidos, key="persona_2")
 
-    # Mostrar comparación si ambas personas tienen datos
-    if not df_persona_1.empty and not df_persona_2.empty:
-        st.markdown("### Comparativa de Personas")
+        # Filtrar datos para las personas seleccionadas (usando el DataFrame original para mantener todas las columnas)
+        df_persona_1 = df[df['Personaapellido'] == persona_1]
+        df_persona_2 = df[df['Personaapellido'] == persona_2]
 
-        # Obtener datos relevantes
-        metrics = ['Personaapellido', 'Personanombre', 'Total_sueldo_bruto', 'seniority', 'Puesto', 'Gerencia']
-        comparison_data = []
+        # Mostrar comparación si ambas personas tienen datos
+        if not df_persona_1.empty and not df_persona_2.empty:
+            st.markdown("### Comparativa de Personas")
 
-        for df_persona, label in [(df_persona_1, "Persona 1"), (df_persona_2, "Persona 2")]:
-            row = df_persona.iloc[0]  # Tomar la primera fila (asumiendo un solo registro por apellido)
-            data = {metric: row[metric] if metric in df_persona.columns else "N/A" for metric in metrics}
-            data['Label'] = label
-            comparison_data.append(data)
+            # Obtener datos relevantes
+            metrics = ['Personaapellido', 'Personanombre', 'Total_sueldo_bruto', 'seniority', 'Puesto', 'Gerencia']
+            comparison_data = []
 
-        # Crear DataFrame para comparación
-        comparison_df = pd.DataFrame(comparison_data)
+            for df_persona, label in [(df_persona_1, "Persona 1"), (df_persona_2, "Persona 2")]:
+                row = df_persona.iloc[0]  # Tomar la primera fila (asumiendo un solo registro por apellido)
+                data = {metric: row[metric] if metric in df_persona.columns else "N/A" for metric in metrics}
+                data['Label'] = label
+                comparison_data.append(data)
 
-        # Mostrar tabla de comparación
-        st.dataframe(comparison_df.set_index('Label')[metrics])
+            # Crear DataFrame para comparación
+            comparison_df = pd.DataFrame(comparison_data)
 
-        # Comparar sueldos
-        if 'Total_sueldo_bruto' in df_persona_1.columns and 'Total_sueldo_bruto' in df_persona_2.columns:
-            sueldo_1 = float(df_persona_1['Total_sueldo_bruto'].iloc[0])
-            sueldo_2 = float(df_persona_2['Total_sueldo_bruto'].iloc[0])
-            if sueldo_1 != 0:
-                diferencia_porcentual = ((sueldo_2 - sueldo_1) / sueldo_1) * 100
-                st.markdown(f"**Diferencia porcentual en sueldo bruto:** {diferencia_porcentual:.2f}%")
-                if diferencia_porcentual > 0:
-                    st.write(f"El sueldo de {persona_2} es {diferencia_porcentual:.2f}% mayor que el de {persona_1}.")
-                elif diferencia_porcentual < 0:
-                    st.write(f"El sueldo de {persona_2} es {abs(diferencia_porcentual):.2f}% menor que el de {persona_1}.")
+            # Mostrar tabla de comparación
+            st.dataframe(comparison_df.set_index('Label')[metrics])
+
+            # Comparar sueldos
+            if 'Total_sueldo_bruto' in df_persona_1.columns and 'Total_sueldo_bruto' in df_persona_2.columns:
+                sueldo_1 = float(df_persona_1['Total_sueldo_bruto'].iloc[0])
+                sueldo_2 = float(df_persona_2['Total_sueldo_bruto'].iloc[0])
+                if sueldo_1 != 0:
+                    diferencia_porcentual = ((sueldo_2 - sueldo_1) / sueldo_1) * 100
+                    st.markdown(f"**Diferencia porcentual en sueldo bruto:** {diferencia_porcentual:.2f}%")
+                    if diferencia_porcentual > 0:
+                        st.write(f"El sueldo de {persona_2} es {diferencia_porcentual:.2f}% mayor que el de {persona_1}.")
+                    elif diferencia_porcentual < 0:
+                        st.write(f"El sueldo de {persona_2} es {abs(diferencia_porcentual):.2f}% menor que el de {persona_1}.")
+                    else:
+                        st.write("Ambas personas tienen el mismo sueldo bruto.")
                 else:
-                    st.write("Ambas personas tienen el mismo sueldo bruto.")
-            else:
-                st.warning("No se puede calcular la diferencia porcentual porque el sueldo de la primera persona es 0.")
-    else:
-        st.warning("Una o ambas personas seleccionadas no tienen datos disponibles.")
+                    st.warning("No se puede calcular la diferencia porcentual porque el sueldo de la primera persona es 0.")
+        else:
+            st.warning("Una o ambas personas seleccionadas no tienen datos disponibles.")
+
+    else:  # Comparar todas las personas filtradas
+        st.markdown("### Comparativa de Todas las Personas Filtradas")
+
+        # Asegurarse de que hay datos para comparar
+        if len(df_filtered) > 0 and 'Total_sueldo_bruto' in df_filtered.columns:
+            # Preparar los datos para el gráfico
+            # Combinar apellido y nombre para etiquetas más claras
+            df_filtered['Nombre_Completo'] = df_filtered['Personaapellido'] + ', ' + df_filtered['Personanombre']
+            
+            # Ordenar de mayor a menor según sueldo bruto
+            df_filtered = df_filtered.sort_values(by='Total_sueldo_bruto', ascending=False)
+
+            # Crear gráfico de barras con Altair
+            chart = alt.Chart(df_filtered).mark_bar().encode(
+                x=alt.X('Nombre_Completo:N', title='Persona', sort='-y', axis=alt.Axis(labelAngle=45)),
+                y=alt.Y('Total_sueldo_bruto:Q', title='Sueldo Bruto ($)'),
+                tooltip=[
+                    'Nombre_Completo',
+                    alt.Tooltip('Total_sueldo_bruto:Q', title='Sueldo Bruto', format='$,.0f'),
+                    'Puesto',
+                    'Gerencia',
+                    'seniority'
+                ]
+            ).properties(
+                height=400,
+                title='Sueldos Brutos de las Personas Filtradas (de Mayor a Menor)'
+            )
+
+            # Mostrar el gráfico
+            st.altair_chart(chart, use_container_width=True)
+
+            # Mostrar la tabla completa con los datos filtrados
+            st.subheader("Datos Detallados")
+            display_columns = ['Nombre_Completo', 'Total_sueldo_bruto', 'seniority', 'Puesto', 'Gerencia']
+            st.dataframe(df_filtered[display_columns])
+        else:
+            st.warning("No hay datos disponibles para comparar con los filtros seleccionados.")
