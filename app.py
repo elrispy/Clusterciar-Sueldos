@@ -700,8 +700,36 @@ elif page == "Comparar Personas":
         if col in df.columns:
             df[col] = df[col].astype(str).replace(['#Ref', 'nan'], '')
 
-    # Selección de personas para comparar
-    apellidos = sorted(df['Personaapellido'].unique())
+    # Filtros previos: Gerencia, Puesto y Seniority
+    st.subheader("Filtros Previos")
+
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        gerencias = ['Todas'] + sorted(df['Gerencia'].unique())
+        selected_gerencia = st.selectbox("Selecciona una Gerencia", gerencias)
+    with col2:
+        puestos = ['Todos'] + sorted(df['Puesto'].unique())
+        selected_puesto = st.selectbox("Selecciona un Puesto", puestos)
+    with col3:
+        seniorities = ['Todos'] + sorted(df['seniority'].unique())
+        selected_seniority = st.selectbox("Selecciona un Seniority", seniorities)
+
+    # Filtrar el DataFrame según las selecciones
+    df_filtered = df.copy()
+    if selected_gerencia != 'Todas':
+        df_filtered = df_filtered[df_filtered['Gerencia'] == selected_gerencia]
+    if selected_puesto != 'Todos':
+        df_filtered = df_filtered[df_filtered['Puesto'] == selected_puesto]
+    if selected_seniority != 'Todos':
+        df_filtered = df_filtered[df_filtered['seniority'] == selected_seniority]
+
+    # Verificar si hay datos después de aplicar los filtros
+    if len(df_filtered) == 0:
+        st.warning("No hay datos disponibles con los filtros seleccionados. Por favor, ajusta los filtros.")
+        st.stop()
+
+    # Selección de personas para comparar (basado en el DataFrame filtrado)
+    apellidos = sorted(df_filtered['Personaapellido'].unique())
     st.subheader("Selecciona dos personas para comparar")
 
     col1, col2 = st.columns(2)
@@ -710,7 +738,7 @@ elif page == "Comparar Personas":
     with col2:
         persona_2 = st.selectbox("Selecciona el segundo apellido", apellidos, key="persona_2")
 
-    # Filtrar datos para las personas seleccionadas
+    # Filtrar datos para las personas seleccionadas (usando el DataFrame original para mantener todas las columnas)
     df_persona_1 = df[df['Personaapellido'] == persona_1]
     df_persona_2 = df[df['Personaapellido'] == persona_2]
 
