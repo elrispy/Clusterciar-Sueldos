@@ -843,31 +843,50 @@ elif page == "Sueldos":
 
     try:
         df = load_sueldos_data()
+        st.write("Archivo sueldos.xlsx cargado correctamente. Columnas disponibles:", df.columns.tolist())
     except FileNotFoundError:
         st.error("No se encontró el archivo sueldos.xlsx")
+        st.stop()
+    except Exception as e:
+        st.error(f"Error al cargar sueldos.xlsx: {str(e)}")
         st.stop()
 
     # Limpiar nombres de columnas
     df.columns = df.columns.str.strip().str.replace(' ', '_').str.lower()
+    st.write("Columnas después de limpiar nombres:", df.columns.tolist())
 
     # Renombrar ConvenioCategoria a Categoría
     if 'conveniocategoria' in df.columns:
         df = df.rename(columns={'conveniocategoria': 'categoria'})
+        st.write("Columna 'conveniocategoria' renombrada a 'categoria'")
 
     # Convertir columnas categóricas a string y manejar valores inválidos
     categorical_columns = ['empresa', 'comitente', 'es_cvh', 'locacion', 'puesto', 'categoria', 'convenio', 'centro_de_costo']
     for col in categorical_columns:
         if col in df.columns:
             df[col] = df[col].astype(str).replace(['#Ref', 'nan'], '')
+        else:
+            st.warning(f"Columna {col} no encontrada en el archivo sueldos.xlsx")
+            df[col] = ''  # Inicializar como cadena vacía si no existe
 
     # Convertir columnas numéricas a float y manejar valores inválidos
     numeric_columns = ['total_remunerativo', 'total_no_remunerativo', 'total_sueldo_bruto', 'total_descuentos', 'neto', 'total_contribuciones', 'provision_sac']
     for col in numeric_columns:
         if col in df.columns:
-            df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
+            try:
+                df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
+            except Exception as e:
+                st.error(f"Error al convertir la columna {col} a numérica: {str(e)}")
+                df[col] = 0
+        else:
+            st.warning(f"Columna {col} no encontrada en el archivo sueldos.xlsx")
+            df[col] = 0  # Inicializar con 0 si no existe
 
-    # Calcular Total Costo Laboral
-    df['total_costo_laboral'] = df['total_sueldo_bruto'] + df['total_contribuciones'] + df['provision_sac']
+    # Calcular Total Costo Laboral con validación de columnas
+    df['total_costo_laboral'] = (df['total_sueldo_bruto'] + 
+                                df.get('total_contribuciones', 0) + 
+                                df.get('provision_sac', 0))
+    st.write("Columnas después de agregar total_costo_laboral:", df.columns.tolist())
 
     # Filtros en la barra lateral
     st.sidebar.header("Filtros")
@@ -883,6 +902,7 @@ elif page == "Sueldos":
     for key, values in filtros.items():
         if values:
             df_filtered = df_filtered[df_filtered[key].isin(values)]
+    st.write("Datos después de aplicar filtros:", df_filtered.shape)
 
     # Resumen General
     st.subheader("Resumen General - Sueldos")
