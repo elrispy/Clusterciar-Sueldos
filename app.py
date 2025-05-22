@@ -94,7 +94,7 @@ except FileNotFoundError:
 
 # Menú principal para seleccionar la página
 st.sidebar.header("Menú Principal")
-page = st.sidebar.selectbox("Selecciona una página", ["Reporte de Sueldos", "Tabla Salarial", "Análisis de Legajos"])
+page = st.sidebar.selectbox("Selecciona una página", ["Reporte de Sueldos", "Tabla Salarial", "Análisis de Legajos", "Comparar Personas"])
 
 # --- Página: Reporte de Sueldos ---
 if page == "Reporte de Sueldos":
@@ -138,10 +138,15 @@ if page == "Reporte de Sueldos":
     # Filtros en la barra lateral
     st.sidebar.header("Filtros")
     filtros = {}
-    for col in ['Empresa', 'CCT', 'Grupo', 'Comitente', 'Puesto', 'seniority', 'Gerencia', 'CVH',
-                'Puesto_tabla_salarial', 'Locacion', 'Centro_de_Costos', 'Especialidad', 'Superior']:
+    filter_columns = [
+        'Empresa', 'CCT', 'Grupo', 'Comitente', 'Puesto', 'seniority', 'Gerencia', 'CVH',
+        'Puesto_tabla_salarial', 'Locacion', 'Centro_de_Costos', 'Especialidad', 'Superior',
+        'PersonaApellido', 'PersonaNombre'
+    ]
+    for col in filter_columns:
         if col in df.columns:
-            filtros[col] = st.sidebar.multiselect(col.replace('_', ' ').title(), df[col].unique())
+            label = "Apellido" if col == "PersonaApellido" else "Nombre" if col == "PersonaNombre" else col.replace('_', ' ').title()
+            filtros[col] = st.sidebar.multiselect(label, df[col].unique())
         else:
             filtros[col] = []
 
@@ -269,12 +274,29 @@ if page == "Reporte de Sueldos":
         # Si se selecciona Puesto_tabla_salarial, mostrar distribución de Seniority
         if grupo_seleccionado == 'Puesto_tabla_salarial' and 'Puesto_tabla_salarial' in df_filtered.columns and 'seniority' in df_filtered.columns:
             st.markdown("### Distribución de Seniority por Puesto Tabla Salarial")
-            puesto_seleccionado = st.selectbox("Selecciona un Puesto Tabla Salarial", df_filtered['Puesto_tabla_salarial'].unique())
-            df_puesto = df_filtered[df_filtered['Puesto_tabla_salarial'] == puesto_seleccionado]
+            puestos_opciones = ['Todos los puestos'] + sorted(df_filtered['Puesto_tabla_salarial'].unique().tolist())
+            puesto_seleccionado = st.selectbox("Selecciona un Puesto Tabla Salarial", puestos_opciones)
+            
+            # Filtro de Gerencia
+            gerencias = sorted(df_filtered['Gerencia'].unique().tolist())
+            gerencia_seleccionada = st.multiselect("Selecciona Gerencia(s)", gerencias, default=gerencias)
+
+            # Filtrar datos según selección
+            if puesto_seleccionado == 'Todos los puestos':
+                df_puesto = df_filtered[df_filtered['Gerencia'].isin(gerencia_seleccionada)]
+            else:
+                df_puesto = df_filtered[
+                    (df_filtered['Puesto_tabla_salarial'] == puesto_seleccionado) &
+                    (df_filtered['Gerencia'].isin(gerencia_seleccionada))
+                ]
+
             if len(df_puesto) > 0:
+                # Calcular distribución de seniority
                 seniority_dist = df_puesto['seniority'].value_counts(normalize=True) * 100
                 seniority_dist = seniority_dist.reset_index()
                 seniority_dist.columns = ['Seniority', 'Porcentaje']
+
+                # Gráfico de distribución
                 seniority_chart = alt.Chart(seniority_dist).mark_arc().encode(
                     theta=alt.Theta('Porcentaje:Q', stack=True),
                     color=alt.Color('Seniority:N', legend=alt.Legend(title="Seniority")),
@@ -282,15 +304,20 @@ if page == "Reporte de Sueldos":
                 ).properties(width=300, height=300)
                 st.altair_chart(seniority_chart, use_container_width=True)
 
-                # Mostrar sueldos para el puesto seleccionado
-                if 'Total_sueldo_bruto' in df_puesto.columns:
+                # Mostrar porcentajes de seniority
+                st.markdown("**Porcentajes de Seniority**:")
+                for _, row in seniority_dist.iterrows():
+                    st.write(f"- {row['Seniority']}: {row['Porcentaje']:.1f}%")
+
+                # Mostrar sueldos para el puesto seleccionado (si no es "Todos los puestos")
+                if puesto_seleccionado != 'Todos los puestos' and 'Total_sueldo_bruto' in df_puesto.columns:
                     sueldo_stats = df_puesto['Total_sueldo_bruto'].agg(['min', 'mean', 'max']).round(0)
-                    st.markdown(f"**Sueldos para {puesto_seleccionado}**:")
+                    st.markdown(f"**Sueldos para {puesto_seleccionado} (filtrado por Gerencia)**:")
                     st.write(f"- Mínimo: ${sueldo_stats['min']:,.0f}")
                     st.write(f"- Promedio: ${sueldo_stats['mean']:,.0f}")
                     st.write(f"- Máximo: ${sueldo_stats['max']:,.0f}")
             else:
-                st.warning("No hay datos para el puesto tabla salarial seleccionado.")
+                st.warning("No hay datos para el puesto tabla salarial y gerencia seleccionados.")
 
         # Si se selecciona Seniority, mostrar sueldos
         if grupo_seleccionado == 'seniority' and 'seniority' in df_filtered.columns and 'Total_sueldo_bruto' in df_filtered.columns:
@@ -644,3 +671,83 @@ elif page == "Análisis de Legajos":
         file_name='analisis_legajos_filtrados.xlsx',
         mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     )
+
+# --- Página: Comparar Personas ---
+elif page == "Comparar Personas":
+    st.title("Comparar Personas")
+
+    # Cargar el archivo de sueldos para comparar personas
+    @st.cache_data
+    def load_data():
+        return pd.read_excel("SUELDOS PARA INFORMES.xlsx", sheet_name=0)
+
+    try:
+        df = load_data()
+    except FileNotFoundError:
+        st.error("No se encontró el archivo SUELDOS PARA INFORMES.xlsx")
+        st.stop()
+
+    # Limpiar nombres de columnas
+    df.columns = df.columns.str.strip().str.replace(' ', '_').str.replace('%_BANDA_SALARIAL', 'Porcentaje_Banda_Salarial')
+
+    # Convertir columnas categóricas a string y manejar valores inválidos
+    categorical_columns = [
+        'Empresa', 'CCT', 'Grupo', 'Comitente', 'Puesto', 'seniority', 'Gerencia', 'CVH',
+        'Puesto_tabla_salarial', 'Locacion', 'Centro_de_Costos', 'Especialidad', 'Superior',
+        'PersonaApellido', 'PersonaNombre'
+    ]
+    for col in categorical_columns:
+        if col in df.columns:
+            df[col] = df[col].astype(str).replace(['#Ref', 'nan'], '')
+
+    # Selección de personas para comparar
+    apellidos = sorted(df['PersonaApellido'].unique())
+    st.subheader("Selecciona dos personas para comparar")
+
+    col1, col2 = st.columns(2)
+    with col1:
+        persona_1 = st.selectbox("Selecciona el primer apellido", apellidos, key="persona_1")
+    with col2:
+        persona_2 = st.selectbox("Selecciona el segundo apellido", apellidos, key="persona_2")
+
+    # Filtrar datos para las personas seleccionadas
+    df_persona_1 = df[df['PersonaApellido'] == persona_1]
+    df_persona_2 = df[df['PersonaApellido'] == persona_2]
+
+    # Mostrar comparación si ambas personas tienen datos
+    if not df_persona_1.empty and not df_persona_2.empty:
+        st.markdown("### Comparativa de Personas")
+
+        # Obtener datos relevantes
+        metrics = ['PersonaApellido', 'PersonaNombre', 'Total_sueldo_bruto', 'seniority', 'Puesto', 'Gerencia']
+        comparison_data = []
+
+        for df_persona, label in [(df_persona_1, "Persona 1"), (df_persona_2, "Persona 2")]:
+            row = df_persona.iloc[0]  # Tomar la primera fila (asumiendo un solo registro por apellido)
+            data = {metric: row[metric] if metric in df_persona.columns else "N/A" for metric in metrics}
+            data['Label'] = label
+            comparison_data.append(data)
+
+        # Crear DataFrame para comparación
+        comparison_df = pd.DataFrame(comparison_data)
+
+        # Mostrar tabla de comparación
+        st.dataframe(comparison_df.set_index('Label')[metrics])
+
+        # Comparar sueldos
+        if 'Total_sueldo_bruto' in df_persona_1.columns and 'Total_sueldo_bruto' in df_persona_2.columns:
+            sueldo_1 = float(df_persona_1['Total_sueldo_bruto'].iloc[0])
+            sueldo_2 = float(df_persona_2['Total_sueldo_bruto'].iloc[0])
+            if sueldo_1 != 0:
+                diferencia_porcentual = ((sueldo_2 - sueldo_1) / sueldo_1) * 100
+                st.markdown(f"**Diferencia porcentual en sueldo bruto:** {diferencia_porcentual:.2f}%")
+                if diferencia_porcentual > 0:
+                    st.write(f"El sueldo de {persona_2} es {diferencia_porcentual:.2f}% mayor que el de {persona_1}.")
+                elif diferencia_porcentual < 0:
+                    st.write(f"El sueldo de {persona_2} es {abs(diferencia_porcentual):.2f}% menor que el de {persona_1}.")
+                else:
+                    st.write("Ambas personas tienen el mismo sueldo bruto.")
+            else:
+                st.warning("No se puede calcular la diferencia porcentual porque el sueldo de la primera persona es 0.")
+    else:
+        st.warning("Una o ambas personas seleccionadas no tienen datos disponibles.")
