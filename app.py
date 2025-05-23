@@ -1022,16 +1022,18 @@ elif page == "Sueldos":
 elif page == "KPIs de Formación":
     st.title("KPIs de Formación")
 
-    # Cargar y procesar el archivo PDF
+    # Cargar y procesar el archivo PDF como imágenes
     @st.cache_data
-    def load_kpi_formacion():
+    def load_kpi_formacion_images():
         try:
             with pdfplumber.open("KPI formacion.pdf") as pdf:
-                pages_text = []
+                images = []
                 for page in pdf.pages:
-                    text = page.extract_text() or ""
-                    pages_text.append(text)
-                return pages_text
+                    # Convertir cada página a imagen (usar resolución alta para mejor calidad)
+                    img = page.to_image(resolution=200)
+                    img_data = img.original  # Obtener los datos de la imagen
+                    images.append(img_data)
+                return images
         except FileNotFoundError:
             st.error("No se encontró el archivo KPI formacion.pdf")
             return None
@@ -1039,16 +1041,14 @@ elif page == "KPIs de Formación":
             st.error(f"Error al procesar KPI formacion.pdf: {str(e)}")
             return None
 
-    pdf_text = load_kpi_formacion()
-    if pdf_text is None:
+    pdf_images = load_kpi_formacion_images()
+    if pdf_images is None:
         st.stop()
 
-    st.write("Contenido extraído del PDF:")
-
-    # Mostrar el contenido página por página
-    for i, page_text in enumerate(pdf_text, 1):
+    # Mostrar las imágenes de las páginas
+    for i, img_data in enumerate(pdf_images, 1):
         st.markdown(f"**Página {i}**")
-        st.markdown(page_text, unsafe_allow_html=True)
+        st.image(img_data, caption=f"Página {i} del PDF", use_column_width=True)
 
 # --- Página: Información Gestión del Talento ---
 elif page == "Información Gestión del Talento":
