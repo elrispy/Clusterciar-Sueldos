@@ -837,6 +837,8 @@ elif page == "Comparar Personas":
         else:
             st.warning("No hay datos disponibles para comparar con los filtros seleccionados.")
 
+# [Otras secciones del código permanecen iguales hasta la sección "Sueldos"...]
+
 # --- Página: Sueldos ---
 elif page == "Sueldos":
     st.title("Reporte de Sueldos")
@@ -871,7 +873,8 @@ elif page == "Sueldos":
         if col in df.columns:
             df[col] = df[col].astype(str).replace(['#Ref', 'nan', ''], 'Sin dato').replace('nan', 'Sin dato')
             unique_values = df[col].dropna().unique()
-            st.write(f"Valores únicos para {col}: {unique_values}")
+            valid_values = [x for x in unique_values if str(x).strip() != 'Sin dato']
+            st.write(f"Valores únicos para {col}: {valid_values}")
         else:
             st.warning(f"Columna {col} no encontrada en el archivo sueldos.xlsx")
             df[col] = 'Sin dato'
@@ -902,7 +905,9 @@ elif page == "Sueldos":
         if col in df.columns:
             unique_values = [x for x in df[col].dropna().unique() if str(x).strip() != 'Sin dato']
             if len(unique_values) > 0:
-                filtros[col] = st.sidebar.multiselect(col.replace('_', ' ').title(), unique_values)
+                label = col.replace('_', ' ').title()
+                filtros[col] = st.sidebar.multiselect(f"{label}", unique_values, key=f"filter_{col}")
+                st.sidebar.write(f"Filtro {label} configurado con {len(unique_values)} opciones")
             else:
                 st.sidebar.warning(f"No hay valores válidos para filtrar por {col.replace('_', ' ').title()}")
                 filtros[col] = []
@@ -971,3 +976,5 @@ elif page == "Sueldos":
         )
     else:
         st.info("No hay datos disponibles con los filtros actuales.")
+
+# [Otras secciones del código permanecen iguales...]
