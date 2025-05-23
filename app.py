@@ -1025,16 +1025,16 @@ elif page == "KPIs de Formación":
     @st.cache_data
     def load_kpi_formacion():
         try:
-            with pdfplumber.open("kpi_formacion.pdf") as pdf:
+            with pdfplumber.open("KPI formacion.pdf") as pdf:
                 text = ""
                 for page in pdf.pages:
                     text += page.extract_text() or ""
                 return text
         except FileNotFoundError:
-            st.error("No se encontró el archivo kpi_formacion.pdf")
+            st.error("No se encontró el archivo KPI formacion.pdf")
             return None
         except Exception as e:
-            st.error(f"Error al procesar kpi_formacion.pdf: {str(e)}")
+            st.error(f"Error al procesar KPI formacion.pdf: {str(e)}")
             return None
 
     pdf_text = load_kpi_formacion()
