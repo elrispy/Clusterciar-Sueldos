@@ -839,6 +839,8 @@ elif page == "Comparar Personas":
 
 # [Otras secciones del código permanecen iguales hasta la sección "Sueldos"...]
 
+# [Otras secciones del código permanecen iguales hasta la sección "Sueldos"...]
+
 # --- Página: Sueldos ---
 elif page == "Sueldos":
     st.title("Reporte de Sueldos")
@@ -859,8 +861,12 @@ elif page == "Sueldos":
         st.stop()
 
     # Limpiar nombres de columnas
-    df.columns = df.columns.str.strip().str.replace(' ', '_').str.lower()
-    st.write("Columnas después de limpiar nombres:", df.columns.tolist())
+    try:
+        df.columns = df.columns.str.strip().str.replace(' ', '_').str.lower()
+        st.write("Columnas después de limpiar nombres:", df.columns.tolist())
+    except Exception as e:
+        st.error(f"Error al limpiar nombres de columnas: {str(e)}")
+        st.stop()
 
     # Renombrar ConvenioCategoria a Categoría
     if 'conveniocategoria' in df.columns:
@@ -871,10 +877,14 @@ elif page == "Sueldos":
     categorical_columns = ['empresa', 'comitente', 'es_cvh', 'locacion', 'puesto', 'categoria', 'convenio', 'centro_de_costo']
     for col in categorical_columns:
         if col in df.columns:
-            df[col] = df[col].astype(str).replace(['#Ref', 'nan', ''], 'Sin dato').replace('nan', 'Sin dato')
-            unique_values = df[col].dropna().unique()
-            valid_values = [x for x in unique_values if str(x).strip() != 'Sin dato']
-            st.write(f"Valores únicos para {col}: {valid_values}")
+            try:
+                df[col] = df[col].astype(str).replace(['#Ref', 'nan', ''], 'Sin dato').replace('nan', 'Sin dato')
+                unique_values = df[col].dropna().unique()
+                valid_values = [x for x in unique_values if str(x).strip() != 'Sin dato']
+                st.write(f"Valores únicos para {col}: {valid_values}")
+            except Exception as e:
+                st.warning(f"Error procesando columna {col}: {str(e)}")
+                df[col] = 'Sin dato'
         else:
             st.warning(f"Columna {col} no encontrada en el archivo sueldos.xlsx")
             df[col] = 'Sin dato'
@@ -901,18 +911,22 @@ elif page == "Sueldos":
     # Filtros en la barra lateral
     st.sidebar.header("Filtros")
     filtros = {}
-    for col in categorical_columns:
-        if col in df.columns:
-            unique_values = [x for x in df[col].dropna().unique() if str(x).strip() != 'Sin dato']
-            if len(unique_values) > 0:
-                label = col.replace('_', ' ').title()
-                filtros[col] = st.sidebar.multiselect(f"{label}", unique_values, key=f"filter_{col}")
-                st.sidebar.write(f"Filtro {label} configurado con {len(unique_values)} opciones")
+    try:
+        for col in categorical_columns:
+            if col in df.columns:
+                unique_values = [x for x in df[col].dropna().unique() if str(x).strip() != 'Sin dato']
+                if len(unique_values) > 0:
+                    label = col.replace('_', ' ').title()
+                    filtros[col] = st.sidebar.multiselect(f"{label}", unique_values, key=f"filter_{col}")
+                    st.sidebar.write(f"Filtro {label} configurado con {len(unique_values)} opciones")
+                else:
+                    st.sidebar.warning(f"No hay valores válidos para filtrar por {label}")
+                    filtros[col] = []
             else:
-                st.sidebar.warning(f"No hay valores válidos para filtrar por {col.replace('_', ' ').title()}")
                 filtros[col] = []
-        else:
-            filtros[col] = []
+        st.sidebar.write("Todos los filtros han sido configurados")
+    except Exception as e:
+        st.sidebar.error(f"Error al configurar filtros: {str(e)}")
 
     # Aplicar filtros
     df_filtered = df.copy()
@@ -976,5 +990,3 @@ elif page == "Sueldos":
         )
     else:
         st.info("No hay datos disponibles con los filtros actuales.")
-
-# [Otras secciones del código permanecen iguales...]
