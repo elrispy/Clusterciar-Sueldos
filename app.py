@@ -225,9 +225,7 @@ if page == "Reporte de Sueldos":
         if 'Porcentaje_Banda_Salarial' in df_filtered.columns:
             st.markdown("### Distribución de Bandas Salariales")
             banda_data = pd.DataFrame({
-                'Categor
-
-ía': ['< 25%', '25-50%', '50-75%', '≥ 75%'],
+                'Categoría': ['< 25%', '25-50%', '50-75%', '≥ 75%'],
                 'Porcentaje': [
                     banda_25,
                     banda_50 - banda_25,
