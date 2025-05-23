@@ -9,6 +9,7 @@ import tempfile
 import os
 import pdfplumber  # Para extraer texto de PDF
 from docx import Document  # Para extraer texto de DOCX
+import xlsxwriter
 
 # Configuración de la página (debe ser la primera llamada)
 st.set_page_config(page_title="Reporte de Sueldos", layout="wide")
@@ -1021,19 +1022,16 @@ elif page == "Sueldos":
 elif page == "KPIs de Formación":
     st.title("KPIs de Formación")
 
-# --- Página: KPIs de Formación ---
-elif page == "KPIs de Formación":
-    st.title("KPIs de Formación")
-
     # Cargar y procesar el archivo PDF
     @st.cache_data
     def load_kpi_formacion():
         try:
             with pdfplumber.open("KPI formacion.pdf") as pdf:
-                text = ""
+                pages_text = []
                 for page in pdf.pages:
-                    text += page.extract_text() or ""
-                return text
+                    text = page.extract_text() or ""
+                    pages_text.append(text)
+                return pages_text
         except FileNotFoundError:
             st.error("No se encontró el archivo KPI formacion.pdf")
             return None
@@ -1046,76 +1044,11 @@ elif page == "KPIs de Formación":
         st.stop()
 
     st.write("Contenido extraído del PDF:")
-    st.text(pdf_text)
 
-    # Intentar convertir el texto en un DataFrame
-    try:
-        # Separar el texto en líneas y buscar patrones
-        lines = pdf_text.split('\n')
-        data = []
-        headers = None
-        for line in lines:
-            if not line.strip():
-                continue
-            if not headers:
-                headers = [h.strip() for h in line.split() if h.strip()]
-                continue
-            values = [v.strip() for v in line.split() if v.strip()]
-            if len(values) == len(headers):
-                data.append(values)
-
-        if headers and data:
-            df_kpi = pd.DataFrame(data, columns=headers)
-            st.write("Datos procesados como tabla:")
-            st.dataframe(df_kpi)
-
-            # Convertir columnas numéricas si es posible
-            for col in df_kpi.columns:
-                df_kpi[col] = pd.to_numeric(df_kpi[col], errors='ignore')
-
-            # Mostrar métricas básicas
-            if not df_kpi.empty and any(col.isnumeric() for col in df_kpi.columns):
-                numeric_cols = df_kpi.select_dtypes(include=[np.number]).columns
-                for col in numeric_cols:
-                    st.metric(f"Total {col}", f"{df_kpi[col].sum():,.0f}")
-
-            # Gráfico simple (si hay al menos una columna numérica)
-            if len(numeric_cols) > 0:
-                st.subheader("Gráfico de KPIs")
-                chart = alt.Chart(df_kpi).mark_bar().encode(
-                    x=alt.X(df_kpi.columns[0] if df_kpi.columns[0] != numeric_cols[0] else df_kpi.columns[1], title=df_kpi.columns[0]),
-                    y=alt.Y(numeric_cols[0], title=numeric_cols[0]),
-                    tooltip=[df_kpi.columns[0], alt.Tooltip(numeric_cols[0], format=",.0f")]
-                ).properties(height=400)
-                st.altair_chart(chart, use_container_width=True)
-        else:
-            st.warning("No se pudo estructurar el texto del PDF en una tabla. Por favor, verifica el formato del archivo.")
-    except Exception as e:
-        st.error(f"Error al procesar los datos del PDF en una tabla: {str(e)}")
-
-    # Exportar a CSV y Excel
-    if 'df_kpi' in locals() and not df_kpi.empty:
-        try:
-            csv = df_kpi.to_csv(index=False).encode('utf-8')
-            st.download_button(
-                label="Descargar datos como CSV",
-                data=csv,
-                file_name='kpi_formacion.csv',
-                mime='text/csv',
-            )
-
-            output = io.BytesIO()
-            with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
-                df_kpi.to_excel(writer, index=False, sheet_name='KPIs de Formación')
-            excel_data = output.getvalue()
-            st.download_button(
-                label="Descargar datos como Excel",
-                data=excel_data,
-                file_name='kpi_formacion.xlsx',
-                mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-            )
-        except Exception as e:
-            st.error(f"Error al exportar los datos: {str(e)}")
+    # Mostrar el contenido página por página
+    for i, page_text in enumerate(pdf_text, 1):
+        st.markdown(f"**Página {i}**")
+        st.markdown(page_text, unsafe_allow_html=True)
 
 # --- Página: Información Gestión del Talento ---
 elif page == "Información Gestión del Talento":
