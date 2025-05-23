@@ -1029,13 +1029,16 @@ elif page == "KPIs de Formación":
             with pdfplumber.open("KPI formacion.pdf") as pdf:
                 images = []
                 for page in pdf.pages:
-                    # Convertir cada página a imagen (usar resolución alta para mejor calidad)
-                    img = page.to_image(resolution=200)
-                    img_data = img.original  # Obtener los datos de la imagen
+                    # Convertir cada página a imagen con resolución alta
+                    img = page.to_image(resolution=200)  # Asegurar compatibilidad con pdfplumber
+                    img_data = img._repr_image()  # Obtener los datos de la imagen como bytes
                     images.append(img_data)
                 return images
         except FileNotFoundError:
             st.error("No se encontró el archivo KPI formacion.pdf")
+            return None
+        except AttributeError as e:
+            st.error(f"Error al procesar KPI formacion.pdf: {str(e)}. Verifica la versión de pdfplumber o el formato del PDF.")
             return None
         except Exception as e:
             st.error(f"Error al procesar KPI formacion.pdf: {str(e)}")
