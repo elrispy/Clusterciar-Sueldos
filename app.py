@@ -1021,6 +1021,10 @@ elif page == "Sueldos":
 elif page == "KPIs de Formación":
     st.title("KPIs de Formación")
 
+# --- Página: KPIs de Formación ---
+elif page == "KPIs de Formación":
+    st.title("KPIs de Formación")
+
     # Cargar y procesar el archivo PDF
     @st.cache_data
     def load_kpi_formacion():
