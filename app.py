@@ -1022,23 +1022,16 @@ elif page == "Sueldos":
 elif page == "KPIs de Formación":
     st.title("KPIs de Formación")
 
-    # Cargar y procesar el archivo PDF como imágenes
+    # Cargar y procesar el archivo PDF como imágenes usando pdf2image
     @st.cache_data
     def load_kpi_formacion_images():
         try:
-            with pdfplumber.open("KPI formacion.pdf") as pdf:
-                images = []
-                for page in pdf.pages:
-                    # Convertir cada página a imagen con resolución alta
-                    img = page.to_image(resolution=200)  # Asegurar compatibilidad con pdfplumber
-                    img_data = img._repr_image()  # Obtener los datos de la imagen como bytes
-                    images.append(img_data)
-                return images
+            from pdf2image import convert_from_path
+            # Convertir todas las páginas del PDF a imágenes
+            images = convert_from_path("KPI formacion.pdf", dpi=200)
+            return images
         except FileNotFoundError:
             st.error("No se encontró el archivo KPI formacion.pdf")
-            return None
-        except AttributeError as e:
-            st.error(f"Error al procesar KPI formacion.pdf: {str(e)}. Verifica la versión de pdfplumber o el formato del PDF.")
             return None
         except Exception as e:
             st.error(f"Error al procesar KPI formacion.pdf: {str(e)}")
