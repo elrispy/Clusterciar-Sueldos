@@ -146,7 +146,12 @@ if page == "Reporte de Sueldos":
     for col in filter_columns:
         if col in df.columns:
             label = "Apellido" if col == "Personaapellido" else "Nombre" if col == "Personanombre" else col.replace('_', ' ').title()
-            filtros[col] = st.sidebar.multiselect(label, df[col].unique())
+            unique_values = df[col].dropna().unique()  # Excluir NaN
+            if len(unique_values) > 0:
+                filtros[col] = st.sidebar.multiselect(label, unique_values)
+            else:
+                st.sidebar.warning(f"No hay valores válidos para filtrar por {label}")
+                filtros[col] = []
         else:
             filtros[col] = []
 
@@ -864,10 +869,12 @@ elif page == "Sueldos":
     categorical_columns = ['empresa', 'comitente', 'es_cvh', 'locacion', 'puesto', 'categoria', 'convenio', 'centro_de_costo']
     for col in categorical_columns:
         if col in df.columns:
-            df[col] = df[col].astype(str).replace(['#Ref', 'nan'], '')
+            df[col] = df[col].astype(str).replace(['#Ref', 'nan', ''], 'Sin dato').replace('nan', 'Sin dato')
+            unique_values = df[col].dropna().unique()
+            st.write(f"Valores únicos para {col}: {unique_values}")
         else:
             st.warning(f"Columna {col} no encontrada en el archivo sueldos.xlsx")
-            df[col] = ''  # Inicializar como cadena vacía si no existe
+            df[col] = 'Sin dato'
 
     # Convertir columnas numéricas a float y manejar valores inválidos
     numeric_columns = ['total_remunerativo', 'total_no_remunerativo', 'total_sueldo_bruto', 'total_descuentos', 'neto', 'total_contribuciones', 'provision_sac']
@@ -880,7 +887,7 @@ elif page == "Sueldos":
                 df[col] = 0
         else:
             st.warning(f"Columna {col} no encontrada en el archivo sueldos.xlsx")
-            df[col] = 0  # Inicializar con 0 si no existe
+            df[col] = 0
 
     # Calcular Total Costo Laboral con validación de columnas
     df['total_costo_laboral'] = (df['total_sueldo_bruto'] + 
@@ -893,7 +900,12 @@ elif page == "Sueldos":
     filtros = {}
     for col in categorical_columns:
         if col in df.columns:
-            filtros[col] = st.sidebar.multiselect(col.replace('_', ' ').title(), df[col].unique())
+            unique_values = [x for x in df[col].dropna().unique() if str(x).strip() != 'Sin dato']
+            if len(unique_values) > 0:
+                filtros[col] = st.sidebar.multiselect(col.replace('_', ' ').title(), unique_values)
+            else:
+                st.sidebar.warning(f"No hay valores válidos para filtrar por {col.replace('_', ' ').title()}")
+                filtros[col] = []
         else:
             filtros[col] = []
 
