@@ -837,12 +837,6 @@ elif page == "Comparar Personas":
         else:
             st.warning("No hay datos disponibles para comparar con los filtros seleccionados.")
 
-# [Otras secciones del código permanecen iguales hasta la sección "Sueldos"...]
-
-# [Otras secciones del código permanecen iguales hasta la sección "Sueldos"...]
-
-# [Otras secciones del código permanecen iguales hasta la sección "Sueldos"...]
-
 # --- Página: Sueldos ---
 elif page == "Sueldos":
     st.title("Reporte de Sueldos")
@@ -919,28 +913,28 @@ elif page == "Sueldos":
         st.error(f"Error al calcular total_costo_laboral: {str(e)}")
         st.stop()
 
-    # Filtros en la barra lateral
-    st.sidebar.header("Filtros")
+    # Filtros en la sección principal (temporalmente, para descartar problemas con st.sidebar)
+    st.subheader("Filtros")
     filtros = {}
     try:
-        st.sidebar.write("Iniciando configuración de filtros...")
+        st.write("Iniciando configuración de filtros...")
         for col in categorical_columns:
             if col in df.columns:
                 unique_values = [x for x in df[col].dropna().unique() if str(x).strip() != 'Sin dato']
                 if len(unique_values) > 0:
                     label = col.replace('_', ' ').title()
-                    st.sidebar.write(f"Configurando filtro para {label} con {len(unique_values)} opciones")
-                    filtros[col] = st.sidebar.multiselect(f"{label}", unique_values, key=f"filter_{col}")
-                    st.sidebar.write(f"Filtro {label} configurado con {len(unique_values)} opciones")
+                    st.write(f"Configurando filtro para {label} con {len(unique_values)} opciones")
+                    filtros[col] = st.multiselect(f"{label}", unique_values, key=f"filter_{col}_main")
+                    st.write(f"Filtro {label} configurado con {len(unique_values)} opciones")
                 else:
-                    st.sidebar.warning(f"No hay valores válidos para filtrar por {label}")
+                    st.warning(f"No hay valores válidos para filtrar por {label}")
                     filtros[col] = []
             else:
-                st.sidebar.warning(f"Columna {col} no encontrada para filtro")
+                st.warning(f"Columna {col} no encontrada para filtro")
                 filtros[col] = []
-        st.sidebar.write("Todos los filtros han sido configurados correctamente")
+        st.write("Todos los filtros han sido configurados correctamente")
     except Exception as e:
-        st.sidebar.error(f"Error al configurar los filtros: {str(e)}")
+        st.error(f"Error al configurar los filtros: {str(e)}")
         st.stop()
 
     # Aplicar filtros
