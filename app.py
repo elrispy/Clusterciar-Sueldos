@@ -8,6 +8,7 @@ from fpdf import FPDF
 import tempfile
 import os
 import pdfplumber  # Para extraer texto de PDF
+from docx import Document  # Para extraer texto de DOCX
 
 # Configuración de la página (debe ser la primera llamada)
 st.set_page_config(page_title="Reporte de Sueldos", layout="wide")
@@ -95,7 +96,15 @@ except FileNotFoundError:
 
 # Menú principal para seleccionar la página
 st.sidebar.header("Menú Principal")
-page = st.sidebar.selectbox("Selecciona una página", ["Reporte de Sueldos", "Tabla Salarial", "Análisis de Legajos", "Comparar Personas", "Sueldos", "KPIs de Formación"])
+page = st.sidebar.selectbox("Selecciona una página", [
+    "Reporte de Sueldos", 
+    "Tabla Salarial", 
+    "Análisis de Legajos", 
+    "Comparar Personas", 
+    "Sueldos", 
+    "KPIs de Formación", 
+    "Información Gestión del Talento"
+])
 
 # --- Página: Reporte de Sueldos ---
 if page == "Reporte de Sueldos":
@@ -216,7 +225,9 @@ if page == "Reporte de Sueldos":
         if 'Porcentaje_Banda_Salarial' in df_filtered.columns:
             st.markdown("### Distribución de Bandas Salariales")
             banda_data = pd.DataFrame({
-                'Categoría': ['< 25%', '25-50%', '50-75%', '≥ 75%'],
+                'Categor
+
+ía': ['< 25%', '25-50%', '50-75%', '≥ 75%'],
                 'Porcentaje': [
                     banda_25,
                     banda_50 - banda_25,
@@ -1035,9 +1046,9 @@ elif page == "KPIs de Formación":
     st.write("Contenido extraído del PDF:")
     st.text(pdf_text)
 
-    # Intentar convertir el texto en un DataFrame (asumiendo un formato simple, por ejemplo, texto delimitado)
+    # Intentar convertir el texto en un DataFrame
     try:
-        # Separar el texto en líneas y buscar patrones (esto es un placeholder; ajustarlo según el contenido real)
+        # Separar el texto en líneas y buscar patrones
         lines = pdf_text.split('\n')
         data = []
         headers = None
@@ -1076,4 +1087,127 @@ elif page == "KPIs de Formación":
                 ).properties(height=400)
                 st.altair_chart(chart, use_container_width=True)
         else:
-            st
+            st.warning("No se pudo estructurar el texto del PDF en una tabla. Por favor, verifica el formato del archivo.")
+    except Exception as e:
+        st.error(f"Error al procesar los datos del PDF en una tabla: {str(e)}")
+
+    # Exportar a CSV y Excel
+    if 'df_kpi' in locals() and not df_kpi.empty:
+        try:
+            csv = df_kpi.to_csv(index=False).encode('utf-8')
+            st.download_button(
+                label="Descargar datos como CSV",
+                data=csv,
+                file_name='kpi_formacion.csv',
+                mime='text/csv',
+            )
+
+            output = io.BytesIO()
+            with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+                df_kpi.to_excel(writer, index=False, sheet_name='KPIs de Formación')
+            excel_data = output.getvalue()
+            st.download_button(
+                label="Descargar datos como Excel",
+                data=excel_data,
+                file_name='kpi_formacion.xlsx',
+                mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            )
+        except Exception as e:
+            st.error(f"Error al exportar los datos: {str(e)}")
+
+# --- Página: Información Gestión del Talento ---
+elif page == "Información Gestión del Talento":
+    st.title("Información Gestión del Talento")
+
+    # Cargar y procesar el archivo DOCX
+    @st.cache_data
+    def load_gdt_informe():
+        try:
+            doc = Document("GdT-Informe RxD Q2.docx")
+            text = []
+            for para in doc.paragraphs:
+                if para.text.strip():
+                    text.append(para.text.strip())
+            return text
+        except FileNotFoundError:
+            st.error("No se encontró el archivo GdT-Informe RxD Q2.docx")
+            return None
+        except Exception as e:
+            st.error(f"Error al procesar GdT-Informe RxD Q2.docx: {str(e)}")
+            return None
+
+    doc_text = load_gdt_informe()
+    if doc_text is None:
+        st.stop()
+
+    st.write("Contenido extraído del documento:")
+    for line in doc_text:
+        st.write(line)
+
+    # Intentar estructurar el texto en un DataFrame (si tiene formato de tabla o lista)
+    try:
+        data = []
+        headers = None
+        for line in doc_text:
+            # Asumir que la primera línea no vacía con múltiples palabras separadas por espacios o tabulaciones es el encabezado
+            if not headers and len(line.split()) > 1:
+                headers = line.split()
+                continue
+            # Procesar líneas como datos si tienen el mismo número de columnas que el encabezado
+            if headers:
+                values = line.split()
+                if len(values) == len(headers):
+                    data.append(values)
+
+        if headers and data:
+            df_gdt = pd.DataFrame(data, columns=headers)
+            st.write("Datos procesados como tabla:")
+            st.dataframe(df_gdt)
+
+            # Convertir columnas numéricas si es posible
+            for col in df_gdt.columns:
+                df_gdt[col] = pd.to_numeric(df_gdt[col], errors='ignore')
+
+            # Mostrar métricas básicas
+            if not df_gdt.empty and any(col.isnumeric() for col in df_gdt.columns):
+                numeric_cols = df_gdt.select_dtypes(include=[np.number]).columns
+                for col in numeric_cols:
+                    st.metric(f"Total {col}", f"{df_gdt[col].sum():,.0f}")
+
+            # Gráfico simple (si hay al menos una columna numérica)
+            if len(numeric_cols) > 0:
+                st.subheader("Gráfico de Gestión del Talento")
+                chart = alt.Chart(df_gdt).mark_bar().encode(
+                    x=alt.X(df_gdt.columns[0] if df_gdt.columns[0] != numeric_cols[0] else df_gdt.columns[1], title=df_gdt.columns[0]),
+                    y=alt.Y(numeric_cols[0], title=numeric_cols[0]),
+                    tooltip=[df_gdt.columns[0], alt.Tooltip(numeric_cols[0], format=",.0f")]
+                ).properties(height=400)
+                st.altair_chart(chart, use_container_width=True)
+        else:
+            st.warning("No se pudo estructurar el texto del documento en una tabla. Por favor, verifica el formato del archivo.")
+    except Exception as e:
+        st.error(f"Error al procesar los datos del documento en una tabla: {str(e)}")
+
+    # Exportar a CSV y Excel
+    if 'df_gdt' in locals() and not df_gdt.empty:
+        try:
+            csv = df_gdt.to_csv(index=False).encode('utf-8')
+            st.download_button(
+                label="Descargar datos como CSV",
+                data=csv,
+                file_name='gdt_informe.csv',
+                mime='text/csv',
+            )
+
+            output = io.BytesIO()
+            with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+                df_gdt.to_excel(writer, index=False, sheet_name='Gestión del Talento')
+            excel_data = output.getvalue()
+            st.download_button(
+                label="Descargar datos como Excel",
+                data=excel_data,
+                file_name='gdt_informe.xlsx',
+                mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            )
+        except Exception as e:
+            st.error(f"Error al exportar los datos: {str(e)}")
