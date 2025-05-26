@@ -638,16 +638,35 @@ elif page == "Comparar Personas":
 
     @st.cache_data
     def load_data():
-        return pd.read_excel("SUELDOS PARA INFORMES.xlsx", sheet_name=0)
+        try:
+            return pd.read_excel("SUELDOS PARA INFORMES.xlsx", sheet_name=0)
+        except FileNotFoundError:
+            st.error("No se encontró el archivo SUELDOS PARA INFORMES.xlsx. Asegúrate de que esté en el directorio raíz del repositorio.")
+            return None
+        except Exception as e:
+            st.error(f"Error al cargar SUELDOS PARA INFORMES.xlsx: {str(e)}")
+            return None
 
-    try:
-        df = load_data()
-    except FileNotFoundError:
-        st.error("No se encontró el archivo SUELDOS PARA INFORMES.xlsx")
+    df = load_data()
+    if df is None:
         st.stop()
 
+    # Depuración: Mostrar información sobre el DataFrame cargado
+    st.write("**Depuración: Datos cargados del archivo SUELDOS PARA INFORMES.xlsx**")
+    st.write(f"Número de filas iniciales: {len(df)}")
+    st.write(f"Columnas disponibles: {df.columns.tolist()}")
+
+    # Limpiar nombres de columnas
     df.columns = df.columns.str.strip().str.replace(' ', '_')
 
+    # Verificar si las columnas críticas existen
+    required_columns = ['Gerencia', 'Puesto_tabla_salarial', 'Grupo', 'seniority', 'Personaapellido']
+    missing_columns = [col for col in required_columns if col not in df.columns]
+    if missing_columns:
+        st.error(f"Faltan las siguientes columnas en el archivo SUELDOS PARA INFORMES.xlsx: {missing_columns}")
+        st.stop()
+
+    # Convertir columnas categóricas a string y manejar valores inválidos
     categorical_columns = [
         'Empresa', 'CCT', 'Grupo', 'Comitente', 'Puesto', 'seniority', 'Gerencia', 'CVH',
         'Puesto_tabla_salarial', 'Locacion', 'Centro_de_Costos', 'Especialidad', 'Superior',
@@ -655,23 +674,32 @@ elif page == "Comparar Personas":
     ]
     for col in categorical_columns:
         if col in df.columns:
-            df[col] = df[col].astype(str).replace(['#Ref', 'nan'], '')
+            df[col] = df[col].astype(str).replace(['#Ref', 'nan', 'NaN', ''], 'Sin dato')
+        else:
+            df[col] = 'Sin dato'
+
+    # Depuración: Mostrar valores únicos de las columnas de filtro
+    st.write("**Depuración: Valores únicos en columnas de filtro**")
+    for col in ['Gerencia', 'Puesto_tabla_salarial', 'Grupo', 'seniority']:
+        unique_vals = df[col].unique().tolist()
+        st.write(f"{col}: {unique_vals}")
 
     st.subheader("Filtros Previos")
     col1, col2, col3, col4 = st.columns(4)
     with col1:
-        gerencias = ['Todas'] + sorted(df['Gerencia'].unique())
+        gerencias = ['Todas'] + sorted([x for x in df['Gerencia'].unique() if x != 'Sin dato'])
         selected_gerencia = st.selectbox("Selecciona una Gerencia", gerencias)
     with col2:
-        puestos = ['Todos'] + sorted(df['Puesto_tabla_salarial'].unique())
+        puestos = ['Todos'] + sorted([x for x in df['Puesto_tabla_salarial'].unique() if x != 'Sin dato'])
         selected_puesto = st.selectbox("Selecciona un Puesto Tabla Salarial", puestos)
     with col3:
-        grupos = ['Todos'] + sorted(df['Grupo'].unique())
+        grupos = ['Todos'] + sorted([x for x in df['Grupo'].unique() if x != 'Sin dato'])
         selected_grupo = st.selectbox("Selecciona un Grupo", grupos)
     with col4:
-        seniorities = ['Todos'] + sorted(df['seniority'].unique())
+        seniorities = ['Todos'] + sorted([x for x in df['seniority'].unique() if x != 'Sin dato'])
         selected_seniority = st.selectbox("Selecciona un Seniority", seniorities)
 
+    # Aplicar filtros
     df_filtered = df.copy()
     if selected_gerencia != 'Todas':
         df_filtered = df_filtered[df_filtered['Gerencia'] == selected_gerencia]
@@ -682,8 +710,11 @@ elif page == "Comparar Personas":
     if selected_seniority != 'Todos':
         df_filtered = df_filtered[df_filtered['seniority'] == selected_seniority]
 
+    # Depuración: Mostrar el número de filas después de aplicar los filtros
+    st.write(f"**Depuración: Número de filas después de aplicar filtros:** {len(df_filtered)}")
+
     if len(df_filtered) == 0:
-        st.warning("No hay datos disponibles con los filtros seleccionados. Por favor, ajusta los filtros.")
+        st.warning("No hay datos disponibles con los filtros seleccionados. Por favor, ajusta los filtros o verifica que el archivo SUELDOS PARA INFORMES.xlsx contenga datos válidos.")
         st.stop()
 
     st.subheader("Selección para comparar")
@@ -693,15 +724,18 @@ elif page == "Comparar Personas":
     )
 
     if comparison_type == "Comparar dos personas":
-        apellidos = sorted(df_filtered['Personaapellido'].unique())
+        apellidos = sorted([x for x in df_filtered['Personaapellido'].unique() if x != 'Sin dato'])
+        if not apellidos:
+            st.warning("No hay apellidos disponibles para comparar. Verifica los datos en la columna 'Personaapellido'.")
+            st.stop()
         col1, col2 = st.columns(2)
         with col1:
             persona_1 = st.selectbox("Selecciona el primer apellido", apellidos, key="persona_1")
         with col2:
             persona_2 = st.selectbox("Selecciona el segundo apellido", apellidos, key="persona_2")
 
-        df_persona_1 = df[df['Personaapellido'] == persona_1]
-        df_persona_2 = df[df['Personaapellido'] == persona_2]
+        df_persona_1 = df_filtered[df_filtered['Personaapellido'] == persona_1]
+        df_persona_2 = df_filtered[df_filtered['Personaapellido'] == persona_2]
 
         if not df_persona_1.empty and not df_persona_2.empty:
             st.markdown("### Comparativa de Personas")
