@@ -677,9 +677,9 @@ elif page == "Comparar Personas":
         df_filtered = df_filtered[df_filtered['Gerencia'] == selected_gerencia]
     if selected_puesto != 'Todos':
         df_filtered = df_filtered[df_filtered['Puesto_tabla_salarial'] == selected_puesto]
-    if selected_grupo != 'Todas':
+    if selected_grupo != 'Todos':
         df_filtered = df_filtered[df_filtered['Grupo'] == selected_grupo]
-    if selected_seniority != 'Todas':
+    if selected_seniority != 'Todos':
         df_filtered = df_filtered[df_filtered['seniority'] == selected_seniority]
 
     if len(df_filtered) == 0:
@@ -882,7 +882,7 @@ elif page == "Indicadores":
     st.title("Indicadores")
     
     # Mostrar la página web en un iframe
-    url = "https://gamma.app/docs/u646fd0ivbz181w?following_id=78krq5by8yl0b8y&follow_on_start=true"
+    url = "https://indicadores-ddp-l78n7xs.gamma.site/"
     iframe(url, height=600, scrolling=True)
 
     # Botón para descargar el PDF
