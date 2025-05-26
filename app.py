@@ -922,15 +922,15 @@ elif page == "Indicadores":
     # Botón para descargar el PDF
     st.markdown("### Descargar Indicadores")
     try:
-        with open("Indicadores DDP.PDF", "rb") as f:
+        with open("Indicadores DDP", "rb") as f:
             st.download_button(
-                label="Descargar Indicadores DDP.PDF",
+                label="Descargar Indicadores DDP",
                 data=f.read(),
-                file_name="Indicadores DDP.PDF",
+                file_name="Indicadores DDP",
                 mime="application/pdf"
             )
     except FileNotFoundError:
-        st.error("No se encontró el archivo Indicadores DDP.PDF. Asegúrate de que esté en el directorio raíz del repositorio.")
+        st.error("No se encontró el archivo Indicadores DDP. Asegúrate de que esté en el directorio raíz del repositorio.")
 
 # --- Página: Novedades DDP ---
 elif page == "Novedades DDP":
