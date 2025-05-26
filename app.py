@@ -7,10 +7,6 @@ from PIL import Image
 from fpdf import FPDF
 import tempfile
 import os
-import pdfplumber
-from docx import Document
-import xlsxwriter
-from pdf2image import convert_from_path
 from streamlit.components.v1 import iframe
 
 # Configuración de la página (debe ser la primera llamada)
@@ -105,10 +101,7 @@ page = st.sidebar.selectbox("Selecciona una página", [
     "Análisis de Legajos", 
     "Comparar Personas", 
     "Sueldos", 
-    "KPIs de Formación", 
     "Indicadores", 
-    "Información General", 
-    "Información Gestión del Talento",
     "Novedades DDP"
 ])
 
@@ -684,9 +677,9 @@ elif page == "Comparar Personas":
         df_filtered = df_filtered[df_filtered['Gerencia'] == selected_gerencia]
     if selected_puesto != 'Todos':
         df_filtered = df_filtered[df_filtered['Puesto_tabla_salarial'] == selected_puesto]
-    if selected_grupo != 'Todos':
+    if selected_grupo != 'Todas':
         df_filtered = df_filtered[df_filtered['Grupo'] == selected_grupo]
-    if selected_seniority != 'Todos':
+    if selected_seniority != 'Todas':
         df_filtered = df_filtered[df_filtered['seniority'] == selected_seniority]
 
     if len(df_filtered) == 0:
@@ -884,218 +877,42 @@ elif page == "Sueldos":
     else:
         st.info("No hay datos disponibles con los filtros actuales.")
 
-# --- Página: KPIs de Formación ---
-elif page == "KPIs de Formación":
-    st.title("KPIs de Formación")
-
-    @st.cache_data
-    def load_kpi_formacion_images():
-        try:
-            from pdf2image import convert_from_path
-            images = convert_from_path("KPI formacion.pdf", dpi=200)
-            return images
-        except FileNotFoundError:
-            st.error("No se encontró el archivo KPI formacion.pdf")
-            return None
-        except Exception as e:
-            st.error(f"Error al procesar KPI formacion.pdf: {str(e)}")
-            return None
-
-    pdf_images = load_kpi_formacion_images()
-    if pdf_images is None:
-        st.stop()
-
-    for i, img_data in enumerate(pdf_images, 1):
-        st.markdown(f"**Página {i}**")
-        st.image(img_data, caption=f"Página {i} del PDF", use_column_width=True)
-
 # --- Página: Indicadores ---
 elif page == "Indicadores":
     st.title("Indicadores")
-
-    @st.cache_data
-    def load_kpi_data():
-        try:
-            df = pd.read_excel("kpi.xlsx")
-            month_cols = [col for col in df.columns if isinstance(col, (int, float)) and col >= 45597]
-            date_cols = {col: pd.to_datetime(col, unit='D', origin='1899-12-30').strftime('%Y-%m') for col in month_cols}
-            df = df.rename(columns=date_cols)
-            return df
-        except FileNotFoundError:
-            st.error("No se encontró el archivo kpi.xlsx")
-            return None
-        except Exception as e:
-            st.error(f"Error al cargar kpi.xlsx: {str(e)}")
-            return None
-
-    df = load_kpi_data()
-    if df is None:
-        st.stop()
-
-    st.header("Análisis de Indicadores")
-    st.write("### Resumen de los datos")
-    st.write(df.describe())
-
-    start_row = df.index[df.iloc[:, 0] == "Cantidad de colaboradores al inicio del mes"][0]
-    end_row = df.index[df.iloc[:, 0] == "Ingresos de personal"][0] - 1
-    df_colaboradores = df.iloc[start_row:end_row].dropna(how='all').reset_index(drop=True)
-
-    indicators = df_colaboradores.iloc[0].dropna().tolist()[1:]
-    df_colaboradores = df_colaboradores.iloc[1:].reset_index(drop=True)
-    df_colaboradores.columns = ['Mes'] + indicators
-
-    df_long = df_colaboradores.melt(id_vars=['Mes'], var_name='Empresa', value_name='Valor')
-    pivot_df = df_long.pivot_table(values='Valor', index='Mes', columns='Empresa', aggfunc='mean', fill_value=0)
-
-    st.write("### Comparaciones de Cantidad de Colaboradores por Mes")
-    st.write(pivot_df)
-
-    st.header("Visualización de Indicadores")
-    st.subheader("Tendencias de Cantidad de Colaboradores a lo largo del tiempo")
-    for empresa in pivot_df.columns:
-        chart = alt.Chart(pivot_df.reset_index()).mark_line().encode(
-            x='Mes:T',
-            y=alt.Y(f'{empresa}:Q', title=f'Colaboradores ({empresa})'),
-            tooltip=['Mes', f'{empresa}']
-        ).properties(width=400, height=300)
-        st.altair_chart(chart, use_container_width=True)
-
-    st.subheader("Comparación Mensual de Cantidad de Colaboradores")
-    for empresa in pivot_df.columns:
-        chart = alt.Chart(pivot_df.reset_index()).mark_bar().encode(
-            x='Mes:T',
-            y=alt.Y(f'{empresa}:Q', title=f'Colaboradores ({empresa})'),
-            tooltip=['Mes', f'{empresa}']
-        ).properties(width=400, height=300)
-        st.altair_chart(chart, use_container_width=True)
-
-    start_row_rot = df.index[df.iloc[:, 0] == "Rotacion de Personal"][0]
-    end_row_rot = df.index[df.iloc[:, 0] == "Retencion de personal"][0] - 1
-    df_rotacion = df.iloc[start_row_rot:end_row_rot].dropna(how='all').reset_index(drop=True)
-    df_rotacion.columns = ['Mes'] + indicators
-    df_rotacion_long = df_rotacion.melt(id_vars=['Mes'], var_name='Empresa', value_name='Valor')
-    pivot_rot_df = df_rotacion_long.pivot_table(values='Valor', index='Mes', columns='Empresa', aggfunc='mean', fill_value=0)
-
-    st.write("### Comparaciones de Rotación de Personal por Mes")
-    st.write(pivot_rot_df)
-
-    st.subheader("Tendencias de Rotación de Personal")
-    for empresa in pivot_rot_df.columns:
-        chart = alt.Chart(pivot_rot_df.reset_index()).mark_line().encode(
-            x='Mes:T',
-            y=alt.Y(f'{empresa}:Q', title=f'Rotación ({empresa})'),
-            tooltip=['Mes', f'{empresa}']
-        ).properties(width=400, height=300)
-        st.altair_chart(chart, use_container_width=True)
-
-    st.subheader("Comparación Mensual de Rotación de Personal")
-    for empresa in pivot_rot_df.columns:
-        chart = alt.Chart(pivot_rot_df.reset_index()).mark_bar().encode(
-            x='Mes:T',
-            y=alt.Y(f'{empresa}:Q', title=f'Rotación ({empresa})'),
-            tooltip=['Mes', f'{empresa}']
-        ).properties(width=400, height=300)
-        st.altair_chart(chart, use_container_width=True)
-
-# --- Página: Información General ---
-elif page == "Información General":
-    st.title("Información General")
-
-    # URL de ejemplo (reemplaza con la URL deseada)
-    url = "https://www.clusterciar.com"  # Cambia esta URL por la que quieras mostrar
+    
+    # Mostrar la página web en un iframe
+    url = "https://gamma.app/docs/u646fd0ivbz181w?following_id=78krq5by8yl0b8y&follow_on_start=true"
     iframe(url, height=600, scrolling=True)
 
-# --- Página: Información Gestión del Talento ---
-elif page == "Información Gestión del Talento":
-    st.title("Información Gestión del Talento")
-
-    @st.cache_data
-    def load_gdt_informe():
-        try:
-            doc = Document("GdT-Informe RxD Q2.docx")
-            text = []
-            for para in doc.paragraphs:
-                if para.text.strip():
-                    text.append(para.text.strip())
-            return text
-        except FileNotFoundError:
-            st.error("No se encontró el archivo GdT-Informe RxD Q2.docx")
-            return None
-        except Exception as e:
-            st.error(f"Error al procesar GdT-Informe RxD Q2.docx: {str(e)}")
-            return None
-
-    doc_text = load_gdt_informe()
-    if doc_text is None:
-        st.stop()
-
-    st.write("Contenido extraído del documento:")
-    for line in doc_text:
-        st.write(line)
-
+    # Botón para descargar el PDF
+    st.markdown("### Descargar Indicadores")
     try:
-        data = []
-        headers = None
-        for line in doc_text:
-            if not headers and len(line.split()) > 1:
-                headers = line.split()
-                continue
-            if headers:
-                values = line.split()
-                if len(values) == len(headers):
-                    data.append(values)
-
-        if headers and data:
-            df_gdt = pd.DataFrame(data, columns=headers)
-            st.write("Datos procesados como tabla:")
-            st.dataframe(df_gdt)
-
-            for col in df_gdt.columns:
-                df_gdt[col] = pd.to_numeric(df_gdt[col], errors='ignore')
-
-            if not df_gdt.empty and any(col.isnumeric() for col in df_gdt.columns):
-                numeric_cols = df_gdt.select_dtypes(include=[np.number]).columns
-                for col in numeric_cols:
-                    st.metric(f"Total {col}", f"{df_gdt[col].sum():,.0f}")
-
-            if len(numeric_cols) > 0:
-                st.subheader("Gráfico de Gestión del Talento")
-                chart = alt.Chart(df_gdt).mark_bar().encode(
-                    x=alt.X(df_gdt.columns[0] if df_gdt.columns[0] != numeric_cols[0] else df_gdt.columns[1], title=df_gdt.columns[0]),
-                    y=alt.Y(numeric_cols[0], title=numeric_cols[0]),
-                    tooltip=[df_gdt.columns[0], alt.Tooltip(numeric_cols[0], format=",.0f")]
-                ).properties(height=400)
-                st.altair_chart(chart, use_container_width=True)
-        else:
-            st.warning("No se pudo estructurar el texto del documento en una tabla. Por favor, verifica el formato del archivo.")
-    except Exception as e:
-        st.error(f"Error al procesar los datos del documento en una tabla: {str(e)}")
-
-    if 'df_gdt' in locals() and not df_gdt.empty:
-        try:
-            csv = df_gdt.to_csv(index=False).encode('utf-8')
+        with open("Indicadores DDP.PDF", "rb") as f:
             st.download_button(
-                label="Descargar datos como CSV",
-                data=csv,
-                file_name='gdt_informe.csv',
-                mime='text/csv',
+                label="Descargar Indicadores DDP.PDF",
+                data=f.read(),
+                file_name="Indicadores DDP.PDF",
+                mime="application/pdf"
             )
-
-            output = io.BytesIO()
-            with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
-                df_gdt.to_excel(writer, index=False, sheet_name='Gestión del Talento')
-            excel_data = output.getvalue()
-            st.download_button(
-                label="Descargar datos como Excel",
-                data=excel_data,
-                file_name='gdt_informe.xlsx',
-                mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-            )
-        except Exception as e:
-            st.error(f"Error al exportar los datos: {str(e)}")
+    except FileNotFoundError:
+        st.error("No se encontró el archivo Indicadores DDP.PDF. Asegúrate de que esté en el directorio raíz del repositorio.")
 
 # --- Página: Novedades DDP ---
 elif page == "Novedades DDP":
     st.title("Novedades DDP")
     url = "https://informe-acciones-ddp-202-7ubaaqk.gamma.site/"
     iframe(url, height=600, scrolling=True)
+
+    # Botón para descargar el PDF
+    st.markdown("### Descargar Acciones DDP")
+    try:
+        with open("Acciones DDP 2025.PDF", "rb") as f:
+            st.download_button(
+                label="Descargar Acciones DDP 2025.PDF",
+                data=f.read(),
+                file_name="Acciones DDP 2025.PDF",
+                mime="application/pdf"
+            )
+    except FileNotFoundError:
+        st.error("No se encontró el archivo Acciones DDP 2025.PDF. Asegúrate de que esté en el directorio raíz del repositorio.")
