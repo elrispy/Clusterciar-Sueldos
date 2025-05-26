@@ -809,7 +809,6 @@ elif page == "Sueldos":
         if col in df.columns:
             df[col] = df[col].astype(str).replace(['#Ref', 'nan', ''], 'Sin dato').replace('nan', 'Sin dato')
         else:
-            st.warning(f"Columna {col} no encontrada en el archivo sueldos.xlsx")
             df[col] = 'Sin dato'
 
     # Normalizar columnas numéricas
@@ -818,8 +817,7 @@ elif page == "Sueldos":
         if col in df.columns:
             df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
         else:
-            st.warning(f"Columna {col} no encontrada en el archivo sueldos.xlsx")
-            df[col] = 0
+            df[col] = 0  # Asignar 0 si la columna no existe, sin mostrar advertencia
 
     # Calcular costo laboral total
     df['total_costo_laboral'] = (df['total_sueldo_bruto'] + 
@@ -836,7 +834,6 @@ elif page == "Sueldos":
                 label = col.replace('_', ' ').title()
                 filtros[col] = st.multiselect(f"{label}", unique_values, key=f"filter_{col}_sueldos")
             else:
-                st.warning(f"No hay valores válidos para filtrar por {label}")
                 filtros[col] = []
         else:
             filtros[col] = []
@@ -929,12 +926,12 @@ elif page == "Indicadores":
         pdf.cell(200, 10, txt="Reporte de Indicadores", ln=True, align='C')
         pdf.ln(10)
 
-        # Agregar descripción básica (puedes personalizar este texto)
-        pdf.multi_cell(0, 10, txt="Este documento contiene un resumen del contenido mostrado en la página https://indicadores-ddp-l78n7xs.gamma.site/. Debido a las limitaciones del sistema, solo se incluye una captura básica del título y esta descripción. Para un PDF completo, utiliza la herramienta adicional proporcionada a continuación.", align='L')
-
-        # Intentar capturar algún texto adicional (esto es limitado por el iframe)
+        # Texto breve personalizado
+        pdf.multi_cell(0, 10, txt="Reporte generado a partir de la página de Indicadores.", align='L')
         pdf.ln(10)
-        pdf.cell(200, 10, txt="Fecha de generación: May 26, 2025, 02:44 PM -03", ln=True)
+
+        # Fecha de generación actualizada
+        pdf.cell(200, 10, txt=f"Fecha de generación: May 26, 2025, 03:25 PM -03", ln=True)
 
         # Guardar y ofrecer descarga
         try:
@@ -950,22 +947,3 @@ elif page == "Indicadores":
             os.unlink(tmpfile.name)
         except Exception as e:
             st.error(f"Error al generar el PDF: {str(e)}")
-
-# --- Página: Novedades DDP ---
-elif page == "Novedades DDP":
-    st.title("Novedades DDP")
-    url = "https://informe-acciones-ddp-202-7ubaaqk.gamma.site/"
-    iframe(url, height=600, scrolling=True)
-
-    # Botón para descargar el PDF
-    st.markdown("### Descargar Acciones DDP")
-    try:
-        with open("Acciones DDP 2025.PDF", "rb") as f:
-            st.download_button(
-                label="Descargar Acciones DDP 2025.PDF",
-                data=f.read(),
-                file_name="Acciones DDP 2025.PDF",
-                mime="application/pdf"
-            )
-    except FileNotFoundError:
-        st.error("No se encontró el archivo Acciones DDP 2025.PDF. Asegúrate de que esté en el directorio raíz del repositorio.")
