@@ -899,18 +899,18 @@ elif page == "Indicadores":
     url = "https://indicadores-ddp-l78n7xs.gamma.site/"
     iframe(url, height=600, scrolling=True)
 
-    # Botón para descargar el PDF
+    # Botón para descargar el archivo Indicadores DDP.pdf
     st.markdown("### Descargar Indicadores")
     try:
-        with open("Indicadores DDP.PDF", "rb") as f:
+        with open("Indicadores DDP.pdf", "rb") as f:
             st.download_button(
-                label="Descargar Indicadores DDP.PDF",
+                label="Descargar Indicadores DDP.pdf",
                 data=f.read(),
-                file_name="Indicadores DDP.PDF",
+                file_name="Indicadores DDP.pdf",
                 mime="application/pdf"
             )
     except FileNotFoundError:
-        st.error("No se encontró el archivo Indicadores DDP.PDF. Asegúrate de que esté en el directorio raíz del repositorio.")
+        st.error("No se encontró el archivo Indicadores DDP.pdf. Asegúrate de que esté en el directorio raíz del repositorio.")
 
     # Generar PDF con contenido básico de la página
     if st.button("Generar y descargar reporte PDF de la página"):
@@ -931,7 +931,7 @@ elif page == "Indicadores":
         pdf.ln(10)
 
         # Fecha de generación actualizada
-        pdf.cell(200, 10, txt=f"Fecha de generación: May 26, 2025, 03:25 PM -03", ln=True)
+        pdf.cell(200, 10, txt=f"Fecha de generación: May 26, 2025, 03:29 PM -03", ln=True)
 
         # Guardar y ofrecer descarga
         try:
@@ -947,3 +947,22 @@ elif page == "Indicadores":
             os.unlink(tmpfile.name)
         except Exception as e:
             st.error(f"Error al generar el PDF: {str(e)}")
+
+# --- Página: Novedades DDP ---
+elif page == "Novedades DDP":
+    st.title("Novedades DDP")
+    url = "https://informe-acciones-ddp-202-7ubaaqk.gamma.site/"
+    iframe(url, height=600, scrolling=True)
+
+    # Botón para descargar el archivo DDP 2025.pdf
+    st.markdown("### Descargar Acciones DDP")
+    try:
+        with open("DDP 2025.pdf", "rb") as f:
+            st.download_button(
+                label="Descargar DDP 2025.pdf",
+                data=f.read(),
+                file_name="DDP 2025.pdf",
+                mime="application/pdf"
+            )
+    except FileNotFoundError:
+        st.error("No se encontró el archivo DDP 2025.pdf. Asegúrate de que esté en el directorio raíz del repositorio.")
