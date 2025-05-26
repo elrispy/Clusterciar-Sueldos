@@ -651,11 +651,6 @@ elif page == "Comparar Personas":
     if df is None:
         st.stop()
 
-    # Depuración: Mostrar información sobre el DataFrame cargado
-    st.write("**Depuración: Datos cargados del archivo SUELDOS PARA INFORMES.xlsx**")
-    st.write(f"Número de filas iniciales: {len(df)}")
-    st.write(f"Columnas disponibles: {df.columns.tolist()}")
-
     # Limpiar nombres de columnas
     df.columns = df.columns.str.strip().str.replace(' ', '_')
 
@@ -677,12 +672,6 @@ elif page == "Comparar Personas":
             df[col] = df[col].astype(str).replace(['#Ref', 'nan', 'NaN', ''], 'Sin dato')
         else:
             df[col] = 'Sin dato'
-
-    # Depuración: Mostrar valores únicos de las columnas de filtro
-    st.write("**Depuración: Valores únicos en columnas de filtro**")
-    for col in ['Gerencia', 'Puesto_tabla_salarial', 'Grupo', 'seniority']:
-        unique_vals = df[col].unique().tolist()
-        st.write(f"{col}: {unique_vals}")
 
     st.subheader("Filtros Previos")
     col1, col2, col3, col4 = st.columns(4)
@@ -709,9 +698,6 @@ elif page == "Comparar Personas":
         df_filtered = df_filtered[df_filtered['Grupo'] == selected_grupo]
     if selected_seniority != 'Todos':
         df_filtered = df_filtered[df_filtered['seniority'] == selected_seniority]
-
-    # Depuración: Mostrar el número de filas después de aplicar los filtros
-    st.write(f"**Depuración: Número de filas después de aplicar filtros:** {len(df_filtered)}")
 
     if len(df_filtered) == 0:
         st.warning("No hay datos disponibles con los filtros seleccionados. Por favor, ajusta los filtros o verifica que el archivo SUELDOS PARA INFORMES.xlsx contenga datos válidos.")
@@ -812,25 +798,22 @@ elif page == "Sueldos":
         st.error("No se pudo cargar el archivo sueldos.xlsx. Verifica que el archivo exista y sea accesible.")
         st.stop()
 
-    st.write("Archivo sueldos.xlsx cargado correctamente. Columnas disponibles:", df.columns.tolist())
-
     df.columns = df.columns.str.strip().str.replace(' ', '_').str.lower()
 
     if 'conveniocategoria' in df.columns:
         df = df.rename(columns={'conveniocategoria': 'categoria'})
 
-    categorical_columns = ['empresa', 'comitente', 'es_cvh', 'locacion', 'puesto', 'categoria', 'convenio', 'centro_de_costo']
+    # Normalizar columnas categóricas
+    categorical_columns = ['empresa', 'es_cvh', 'personaapellido', 'personanombre']
     for col in categorical_columns:
         if col in df.columns:
             df[col] = df[col].astype(str).replace(['#Ref', 'nan', ''], 'Sin dato').replace('nan', 'Sin dato')
-            unique_values = df[col].dropna().unique()
-            valid_values = [x for x in unique_values if str(x).strip() != 'Sin dato']
-            st.write(f"Valores únicos para {col}: {valid_values}")
         else:
             st.warning(f"Columna {col} no encontrada en el archivo sueldos.xlsx")
             df[col] = 'Sin dato'
 
-    numeric_columns = ['total_remunerativo', 'total_no_remunerativo', 'total_sueldo_bruto', 'total_descuentos', 'neto', 'total_contribuciones', 'provision_sac']
+    # Normalizar columnas numéricas
+    numeric_columns = ['total_sueldo_bruto', 'neto', 'total_contribuciones', 'provision_sac']
     for col in numeric_columns:
         if col in df.columns:
             df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
@@ -838,10 +821,12 @@ elif page == "Sueldos":
             st.warning(f"Columna {col} no encontrada en el archivo sueldos.xlsx")
             df[col] = 0
 
+    # Calcular costo laboral total
     df['total_costo_laboral'] = (df['total_sueldo_bruto'] + 
                                  df.get('total_contribuciones', 0) + 
                                  df.get('provision_sac', 0))
 
+    # Filtros
     st.subheader("Filtros")
     filtros = {}
     for col in categorical_columns:
@@ -849,48 +834,45 @@ elif page == "Sueldos":
             unique_values = [x for x in df[col].dropna().unique() if str(x).strip() != 'Sin dato']
             if len(unique_values) > 0:
                 label = col.replace('_', ' ').title()
-                filtros[col] = st.multiselect(f"{label}", unique_values, key=f"filter_{col}_main")
+                filtros[col] = st.multiselect(f"{label}", unique_values, key=f"filter_{col}_sueldos")
             else:
                 st.warning(f"No hay valores válidos para filtrar por {label}")
                 filtros[col] = []
         else:
             filtros[col] = []
 
+    # Aplicar filtros
     df_filtered = df.copy()
     for key, values in filtros.items():
         if values:
             df_filtered = df_filtered[df_filtered[key].isin(values)]
 
+    # Mostrar resultados
     st.subheader("Resumen General - Sueldos")
     if len(df_filtered) > 0:
-        total_remunerativo = df_filtered['total_remunerativo'].sum()
-        total_no_remunerativo = df_filtered['total_no_remunerativo'].sum()
         total_sueldo_bruto = df_filtered['total_sueldo_bruto'].sum()
-        total_descuentos = df_filtered['total_descuentos'].sum()
         neto = df_filtered['neto'].sum()
         total_costo_laboral = df_filtered['total_costo_laboral'].sum()
 
         col1, col2, col3 = st.columns(3)
-        col1.metric("Total Remunerativo", f"${total_remunerativo:,.0f}")
-        col2.metric("Total No Remunerativo", f"${total_no_remunerativo:,.0f}")
-        col3.metric("Total Sueldo Bruto", f"${total_sueldo_bruto:,.0f}")
-
-        col4, col5, col6 = st.columns(3)
-        col4.metric("Total Descuentos", f"${total_descuentos:,.0f}")
-        col5.metric("Neto", f"${neto:,.0f}")
-        col6.metric("Total Costo Laboral", f"${total_costo_laboral:,.0f}")
+        col1.metric("Total Sueldo Bruto", f"${total_sueldo_bruto:,.0f}")
+        col2.metric("Neto", f"${neto:,.0f}")
+        col3.metric("Total Costo Laboral", f"${total_costo_laboral:,.0f}")
 
         st.subheader("Tabla de Datos Filtrados")
-        display_columns = ['empresa', 'comitente', 'es_cvh', 'locacion', 'puesto', 'categoria', 'convenio', 'centro_de_costo', 'total_remunerativo', 'total_no_remunerativo', 'total_sueldo_bruto', 'total_descuentos', 'neto', 'total_costo_laboral']
+        display_columns = ['empresa', 'es_cvh', 'personaapellido', 'personanombre', 'total_sueldo_bruto', 'neto', 'total_costo_laboral']
         st.dataframe(df_filtered[display_columns].rename(columns={
-            'empresa': 'Empresa', 'comitente': 'Comitente', 'es_cvh': 'Es CVH', 'locacion': 'Locación',
-            'puesto': 'Puesto', 'categoria': 'Categoría', 'convenio': 'Convenio', 'centro_de_costo': 'Centro de Costo',
-            'total_remunerativo': 'Total Remunerativo', 'total_no_remunerativo': 'Total No Remunerativo',
-            'total_sueldo_bruto': 'Total Sueldo Bruto', 'total_descuentos': 'Total Descuentos',
-            'neto': 'Neto', 'total_costo_laboral': 'Total Costo Laboral'
+            'empresa': 'Empresa',
+            'es_cvh': 'Es CVH',
+            'personaapellido': 'Apellido',
+            'personanombre': 'Nombre',
+            'total_sueldo_bruto': 'Total Sueldo Bruto',
+            'neto': 'Neto',
+            'total_costo_laboral': 'Total Costo Laboral'
         }))
 
-        csv = df_filtered.to_csv(index=False).encode('utf-8')
+        # Exportar a CSV
+        csv = df_filtered[display_columns].to_csv(index=False).encode('utf-8')
         st.download_button(
             label="Descargar datos filtrados como CSV",
             data=csv,
@@ -898,9 +880,10 @@ elif page == "Sueldos":
             mime='text/csv',
         )
 
+        # Exportar a Excel
         output = io.BytesIO()
         with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
-            df_filtered.to_excel(writer, index=False, sheet_name='Datos Filtrados')
+            df_filtered[display_columns].to_excel(writer, index=False, sheet_name='Datos Filtrados')
         excel_data = output.getvalue()
         st.download_button(
             label="Descargar datos filtrados como Excel",
