@@ -922,15 +922,51 @@ elif page == "Indicadores":
     # Botón para descargar el PDF
     st.markdown("### Descargar Indicadores")
     try:
-        with open("Indicadores DDP", "rb") as f:
+        with open("Indicadores DDP.PDF", "rb") as f:
             st.download_button(
-                label="Descargar Indicadores DDP",
+                label="Descargar Indicadores DDP.PDF",
                 data=f.read(),
-                file_name="Indicadores DDP",
+                file_name="Indicadores DDP.PDF",
                 mime="application/pdf"
             )
     except FileNotFoundError:
-        st.error("No se encontró el archivo Indicadores DDP. Asegúrate de que esté en el directorio raíz del repositorio.")
+        st.error("No se encontró el archivo Indicadores DDP.PDF. Asegúrate de que esté en el directorio raíz del repositorio.")
+
+    # Generar PDF con contenido básico de la página
+    if st.button("Generar y descargar reporte PDF de la página"):
+        from fpdf import FPDF
+        import tempfile
+        import os
+
+        pdf = FPDF()
+        pdf.add_page()
+        pdf.set_font("Arial", size=12)
+
+        # Título de la página
+        pdf.cell(200, 10, txt="Reporte de Indicadores", ln=True, align='C')
+        pdf.ln(10)
+
+        # Agregar descripción básica (puedes personalizar este texto)
+        pdf.multi_cell(0, 10, txt="Este documento contiene un resumen del contenido mostrado en la página https://indicadores-ddp-l78n7xs.gamma.site/. Debido a las limitaciones del sistema, solo se incluye una captura básica del título y esta descripción. Para un PDF completo, utiliza la herramienta adicional proporcionada a continuación.", align='L')
+
+        # Intentar capturar algún texto adicional (esto es limitado por el iframe)
+        pdf.ln(10)
+        pdf.cell(200, 10, txt="Fecha de generación: May 26, 2025, 02:44 PM -03", ln=True)
+
+        # Guardar y ofrecer descarga
+        try:
+            with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmpfile:
+                pdf.output(tmpfile.name)
+                with open(tmpfile.name, "rb") as f:
+                    st.download_button(
+                        label="Descargar reporte PDF generado",
+                        data=f.read(),
+                        file_name="reporte_indicadores.pdf",
+                        mime="application/pdf"
+                    )
+            os.unlink(tmpfile.name)
+        except Exception as e:
+            st.error(f"Error al generar el PDF: {str(e)}")
 
 # --- Página: Novedades DDP ---
 elif page == "Novedades DDP":
