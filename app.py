@@ -184,7 +184,7 @@ if page == "Reporte de Sueldos":
         maximo_sueldo = df_filtered['Total_sueldo_bruto'].max() if 'Total_sueldo_bruto' in df_filtered.columns else 0
         dispersion_sueldo = maximo_sueldo - minimo_sueldo
         dispersion_porcentaje = (dispersion_sueldo / minimo_sueldo * 100) if minimo_sueldo > 0 else 0
-        costo_total = df_filtered['Costo_laboral'].sum() if 'Costo_laboral' in df_filtered.columns else 0
+        costo_total = df_filtered['Total_Costo_laboral'].sum() if 'Total_Costo_laboral' in df_filtered.columns else 0
 
         if 'Especialidad' in df_filtered.columns:
             especialidad_dist = df_filtered['Especialidad'].value_counts(normalize=True) * 100
@@ -209,7 +209,7 @@ if page == "Reporte de Sueldos":
 
         col5, col6 = st.columns(2)
         col5.metric("Dispersión Salarial", f"${dispersion_sueldo:,.0f} ({dispersion_porcentaje:.1f}%)")
-        col6.metric("Costo Laboral Total", f"${costo_total:,.0f}")
+        col6.metric("Total Costo Laboral Total", f"${costo_total:,.0f}")
 
         if 'Especialidad' in df_filtered.columns:
             st.markdown("### Distribución de Especialidad")
@@ -353,7 +353,7 @@ if page == "Reporte de Sueldos":
             'Sueldo_Mínimo': [minimo_sueldo],
             'Sueldo_Máximo': [maximo_sueldo],
             'Dispersión_Salarial': [dispersion_sueldo],
-            'Costo_laboral': [costo_total],
+            'Total_Costo_laboral': [costo_total],
             'Porcentaje_<25%': [banda_25],
             'Porcentaje_<50%': [banda_50],
             'Porcentaje_<75%': [banda_75],
@@ -392,7 +392,7 @@ if page == "Reporte de Sueldos":
         pdf.cell(200, 10, txt=clean_text(f"Sueldo promedio: ${promedio_sueldo:,.0f}"), ln=True)
         pdf.cell(200, 10, txt=clean_text(f"Sueldo mínimo / máximo: ${minimo_sueldo:,.0f} / ${maximo_sueldo:,.0f}"), ln=True)
         pdf.cell(200, 10, txt=clean_text(f"Dispersión salarial: ${dispersion_sueldo:,.0f} ({dispersion_porcentaje:.1f}%)"), ln=True)
-        pdf.cell(200, 10, txt=clean_text(f"Costo laboral total: ${costo_total:,.0f}"), ln=True)
+        pdf.cell(200, 10, txt=clean_text(f"Total Costo laboral total: ${costo_total:,.0f}"), ln=True)
         pdf.cell(200, 10, txt=clean_text(f"Porcentaje <25%: {banda_25:.1f}%"), ln=True)
         pdf.cell(200, 10, txt=clean_text(f"Porcentaje <50%: {banda_50:.1f}%"), ln=True)
         pdf.cell(200, 10, txt=clean_text(f"Porcentaje <75%: {banda_75:.1f}%"), ln=True)
