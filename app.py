@@ -863,14 +863,24 @@ elif page == "Sueldos":
     # Mostrar resultados
     st.subheader("Resumen General - Sueldos")
     if len(df_filtered) > 0:
+        cantidad_personas = len(df_filtered)
+        sueldo_bruto_promedio = df_filtered['total_sueldo_bruto'].mean()
+        sueldo_neto_promedio = df_filtered['neto'].mean()
+        costo_laboral_promedio = df_filtered['total_costo_laboral'].mean()
         total_sueldo_bruto = df_filtered['total_sueldo_bruto'].sum()
         neto = df_filtered['neto'].sum()
         total_costo_laboral = df_filtered['total_costo_laboral'].sum()
 
-        col1, col2, col3 = st.columns(3)
-        col1.metric("Total Sueldo Bruto", f"${total_sueldo_bruto:,.0f}")
-        col2.metric("Neto", f"${neto:,.0f}")
-        col3.metric("Total Costo Laboral", f"${total_costo_laboral:,.0f}")
+        col1, col2, col3, col4 = st.columns(4)
+        col1.metric("Cantidad de Personas", cantidad_personas)
+        col2.metric("Sueldo Bruto Promedio", f"${sueldo_bruto_promedio:,.0f}")
+        col3.metric("Sueldo Neto Promedio", f"${sueldo_neto_promedio:,.0f}")
+        col4.metric("Costo Laboral Promedio", f"${costo_laboral_promedio:,.0f}")
+
+        col5, col6, col7 = st.columns(3)
+        col5.metric("Total Sueldo Bruto", f"${total_sueldo_bruto:,.0f}")
+        col6.metric("Total Neto", f"${neto:,.0f}")
+        col7.metric("Total Costo Laboral", f"${total_costo_laboral:,.0f}")
 
         st.subheader("Tabla de Datos Filtrados")
         display_columns = ['empresa', 'es_cvh', 'apellido_nombre', 'comitente', 'total_sueldo_bruto', 'neto', 'total_costo_laboral']
