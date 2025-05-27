@@ -827,17 +827,12 @@ elif page == "Sueldos":
     df['apellido_nombre'] = df['personaapellido'] + ' ' + df['personanombre']
 
     # Normalizar columnas numéricas
-    numeric_columns = ['total_sueldo_bruto', 'neto', 'total_contribuciones', 'provision_sac']
+    numeric_columns = ['total_sueldo_bruto', 'neto', 'total_costo_laboral']
     for col in numeric_columns:
         if col in df.columns:
             df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
         else:
             df[col] = 0
-
-    # Calcular costo laboral total
-    df['total_costo_laboral'] = (df['total_sueldo_bruto'] + 
-                                 df.get('total_contribuciones', 0) + 
-                                 df.get('provision_sac', 0))
 
     # Filtros
     st.subheader("Filtros")
