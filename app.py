@@ -10,7 +10,7 @@ import os
 from streamlit.components.v1 import iframe
 
 # Configuración de la página (debe ser la primera llamada)
-st.set_page_config(page_title="DDP", layout="wide")
+st.set_page_config(page_title="DDP 2025", layout="wide")
 
 # CSS personalizado con fuente Red Hat Display y diseño responsive
 st.markdown(
@@ -98,21 +98,21 @@ def mostrar_titulo_principal():
     st.markdown("<h1 style='text-align: center;'>Dirección de Desarrollo de las Personas</h1>", unsafe_allow_html=True)
 
 # Menú principal para seleccionar la página
-st.sidebar.title("DDP")
+st.sidebar.title("DDP 2025")
 page = st.sidebar.selectbox("Selecciona una página", [
-    "Reporte de Sueldos", 
+    "Sueldos FC", 
     "Tabla Salarial", 
     "Análisis de Legajos", 
     "Comparar Personas", 
-    "Sueldos", 
+    "Sueldos Todos", 
     "Indicadores", 
     "Novedades DDP"
 ])
 
-# --- Página: Reporte de Sueldos ---
-if page == "Reporte de Sueldos":
+# --- Página: Sueldos FC ---
+if page == "Sueldos FC":
     mostrar_titulo_principal()
-    st.title("Reporte Interactivo de Sueldos")
+    st.title("Análisis Salarial Personal Fuera de Convenio")
 
     # Cargar el archivo Excel fijo
     @st.cache_data
@@ -792,10 +792,10 @@ elif page == "Comparar Personas":
         else:
             st.warning("No hay datos disponibles para comparar con los filtros seleccionados.")
 
-# --- Página: Sueldos ---
-elif page == "Sueldos":
+# --- Página: Sueldos Todos ---
+elif page == "Sueldos Todos":
     mostrar_titulo_principal()
-    st.title("Reporte de Sueldos")
+    st.title("Análisis Salarial Personal Clusterciar")
 
     @st.cache_data
     def load_sueldos_data():
