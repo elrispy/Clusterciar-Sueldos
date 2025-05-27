@@ -184,7 +184,7 @@ if page == "Reporte de Sueldos":
         maximo_sueldo = df_filtered['Total_sueldo_bruto'].max() if 'Total_sueldo_bruto' in df_filtered.columns else 0
         dispersion_sueldo = maximo_sueldo - minimo_sueldo
         dispersion_porcentaje = (dispersion_sueldo / minimo_sueldo * 100) if minimo_sueldo > 0 else 0
-        costo_total = df_filtered['Total_Costo_laboral'].sum() if 'Total_Costo_laboral' in df_filtered.columns else 0
+        costo_total = df_filtered['Costo_laboral'].sum() if 'Costo_laboral' in df_filtered.columns else 0
 
         if 'Especialidad' in df_filtered.columns:
             especialidad_dist = df_filtered['Especialidad'].value_counts(normalize=True) * 100
@@ -209,7 +209,7 @@ if page == "Reporte de Sueldos":
 
         col5, col6 = st.columns(2)
         col5.metric("Dispersión Salarial", f"${dispersion_sueldo:,.0f} ({dispersion_porcentaje:.1f}%)")
-        col6.metric("Total Costo Laboral Total", f"${costo_total:,.0f}")
+        col6.metric("Costo Laboral Total", f"${costo_total:,.0f}")
 
         if 'Especialidad' in df_filtered.columns:
             st.markdown("### Distribución de Especialidad")
@@ -353,7 +353,7 @@ if page == "Reporte de Sueldos":
             'Sueldo_Mínimo': [minimo_sueldo],
             'Sueldo_Máximo': [maximo_sueldo],
             'Dispersión_Salarial': [dispersion_sueldo],
-            'Total_Costo_laboral': [costo_total],
+            'Costo_laboral': [costo_total],
             'Porcentaje_<25%': [banda_25],
             'Porcentaje_<50%': [banda_50],
             'Porcentaje_<75%': [banda_75],
@@ -392,7 +392,7 @@ if page == "Reporte de Sueldos":
         pdf.cell(200, 10, txt=clean_text(f"Sueldo promedio: ${promedio_sueldo:,.0f}"), ln=True)
         pdf.cell(200, 10, txt=clean_text(f"Sueldo mínimo / máximo: ${minimo_sueldo:,.0f} / ${maximo_sueldo:,.0f}"), ln=True)
         pdf.cell(200, 10, txt=clean_text(f"Dispersión salarial: ${dispersion_sueldo:,.0f} ({dispersion_porcentaje:.1f}%)"), ln=True)
-        pdf.cell(200, 10, txt=clean_text(f"Total Costo laboral total: ${costo_total:,.0f}"), ln=True)
+        pdf.cell(200, 10, txt=clean_text(f"Costo laboral total: ${costo_total:,.0f}"), ln=True)
         pdf.cell(200, 10, txt=clean_text(f"Porcentaje <25%: {banda_25:.1f}%"), ln=True)
         pdf.cell(200, 10, txt=clean_text(f"Porcentaje <50%: {banda_50:.1f}%"), ln=True)
         pdf.cell(200, 10, txt=clean_text(f"Porcentaje <75%: {banda_75:.1f}%"), ln=True)
@@ -863,24 +863,26 @@ elif page == "Sueldos":
     # Mostrar resultados
     st.subheader("Resumen General - Sueldos")
     if len(df_filtered) > 0:
+        # Calcular las métricas solicitadas
         cantidad_personas = len(df_filtered)
-        sueldo_bruto_promedio = df_filtered['total_sueldo_bruto'].mean()
-        sueldo_neto_promedio = df_filtered['neto'].mean()
-        costo_laboral_promedio = df_filtered['total_costo_laboral'].mean()
         total_sueldo_bruto = df_filtered['total_sueldo_bruto'].sum()
-        neto = df_filtered['neto'].sum()
+        total_sueldo_neto = df_filtered['neto'].sum()
         total_costo_laboral = df_filtered['total_costo_laboral'].sum()
+        sueldo_bruto_promedio = total_sueldo_bruto / cantidad_personas if cantidad_personas > 0 else 0
+        sueldo_neto_promedio = total_sueldo_neto / cantidad_personas if cantidad_personas > 0 else 0
+        costo_laboral_promedio = total_costo_laboral / cantidad_personas if cantidad_personas > 0 else 0
 
+        # Mostrar las métricas en el orden solicitado
         col1, col2, col3, col4 = st.columns(4)
         col1.metric("Cantidad de Personas", cantidad_personas)
-        col2.metric("Sueldo Bruto Promedio", f"${sueldo_bruto_promedio:,.0f}")
-        col3.metric("Sueldo Neto Promedio", f"${sueldo_neto_promedio:,.0f}")
-        col4.metric("Costo Laboral Promedio", f"${costo_laboral_promedio:,.0f}")
+        col2.metric("Total Sueldo Bruto", f"${total_sueldo_bruto:,.0f}")
+        col3.metric("Total Sueldo Neto", f"${total_sueldo_neto:,.0f}")
+        col4.metric("Total Costo Laboral", f"${total_costo_laboral:,.0f}")
 
         col5, col6, col7 = st.columns(3)
-        col5.metric("Total Sueldo Bruto", f"${total_sueldo_bruto:,.0f}")
-        col6.metric("Total Neto", f"${neto:,.0f}")
-        col7.metric("Total Costo Laboral", f"${total_costo_laboral:,.0f}")
+        col5.metric("Sueldo Bruto Promedio", f"${sueldo_bruto_promedio:,.0f}")
+        col6.metric("Sueldo Neto Promedio", f"${sueldo_neto_promedio:,.0f}")
+        col7.metric("Costo Laboral Promedio", f"${costo_laboral_promedio:,.0f}")
 
         st.subheader("Tabla de Datos Filtrados")
         display_columns = ['empresa', 'es_cvh', 'apellido_nombre', 'comitente', 'total_sueldo_bruto', 'neto', 'total_costo_laboral']
