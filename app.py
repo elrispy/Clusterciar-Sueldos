@@ -100,17 +100,113 @@ def mostrar_titulo_principal():
 # Menú principal para seleccionar la página
 st.sidebar.title("DDP 2025")
 page = st.sidebar.selectbox("Selecciona una página", [
-    "Sueldos FC", 
-    "Tabla Salarial", 
-    "Análisis de Legajos", 
-    "Comparar Personas", 
-    "Sueldos Todos", 
-    "Indicadores", 
-    "Novedades DDP"
+    "Novedades DDP",
+    "Indicadores",
+    "Análisis de Legajos",
+    "Sueldos FC",
+    "Sueldos Todos",
+    "Comparar Personas",
+    "Tabla Salarial"
 ])
 
+# --- Página: Novedades DDP ---
+if page == "Novedades DDP":
+    mostrar_titulo_principal()
+    st.title("Novedades DDP")
+    # Mostrar el contenido del enlace en un iframe
+    url = "https://informe-acciones-ddp-202-7ubaaqk.gamma.site/"
+    iframe(url, height=600, scrolling=True)
+
+# --- Página: Indicadores ---
+elif page == "Indicadores":
+    mostrar_titulo_principal()
+    st.title("Indicadores")
+    
+    # Mostrar la página web en un iframe
+    url = "https://indicadores-ddp-l78n7xs.gamma.site/"
+    iframe(url, height=600, scrolling=True)
+
+    # Botón para descargar el archivo Indicadores DDP.pdf
+    st.markdown("### Descargar Indicadores")
+    try:
+        with open("Indicadores DDP.pdf", "rb") as f:
+            st.download_button(
+                label="Descargar Indicadores DDP.pdf",
+                data=f.read(),
+                file_name="Indicadores DDP.pdf",
+                mime="application/pdf"
+            )
+    except FileNotFoundError:
+        st.error("No se encontró el archivo Indicadores DDP.pdf. Asegúrate de que esté en el directorio raíz del repositorio.")
+
+# --- Página: Análisis de Legajos ---
+elif page == "Análisis de Legajos":
+    mostrar_titulo_principal()
+    st.title("Análisis de Legajos")
+
+    @st.cache_data
+    def load_analisis_legajos():
+        return pd.read_excel("Análisis de legajos.xlsx", sheet_name=0)
+
+    try:
+        df_legajos = load_analisis_legajos()
+    except FileNotFoundError:
+        st.error("No se encontró el archivo Análisis de legajos.xlsx")
+        st.stop()
+
+    df_legajos.columns = df_legajos.columns.str.strip().str.replace(' ', '_')
+
+    categorical_columns = [col for col in df_legajos.columns if df_legajos[col].dtype == 'object']
+    for col in categorical_columns:
+        df_legajos[col] = df_legajos[col].astype(str).replace(['#Ref', 'nan'], '')
+
+    date_columns = [col for col in df_legajos.columns if 'fecha' in col.lower() or 'date' in col.lower()]
+    for col in date_columns:
+        df_legajos[col] = pd.to_datetime(df_legajos[col], errors='coerce')
+
+    st.sidebar.header("Filtros")
+    filtros = {}
+    for col in categorical_columns:
+        if col in df_legajos.columns:
+            filtros[col] = st.sidebar.multiselect(col.replace('_', ' ').title(), df_legajos[col].unique())
+        else:
+            filtros[col] = []
+
+    df_filtered = df_legajos.copy()
+    for key, values in filtros.items():
+        if values:
+            df_filtered = df_filtered[df_filtered[key].isin(values)]
+
+    st.subheader("Resumen General - Análisis de Legajos")
+    if len(df_filtered) > 0:
+        st.metric("Total Registros", len(df_filtered))
+    else:
+        st.info("No hay datos disponibles con los filtros actuales.")
+
+    st.subheader("Tabla de Datos Filtrados")
+    st.dataframe(df_filtered)
+
+    csv = df_filtered.to_csv(index=False).encode('utf-8')
+    st.download_button(
+        label="Descargar datos filtrados como CSV",
+        data=csv,
+        file_name='analisis_legajos_filtrados.csv',
+        mime='text/csv',
+    )
+
+    output = io.BytesIO()
+    with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+        df_filtered.to_excel(writer, index=False, sheet_name='Datos Filtrados')
+    excel_data = output.getvalue()
+    st.download_button(
+        label="Descargar datos filtrados como Excel",
+        data=excel_data,
+        file_name='analisis_legajos_filtrados.xlsx',
+        mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    )
+
 # --- Página: Sueldos FC ---
-if page == "Sueldos FC":
+elif page == "Sueldos FC":
     mostrar_titulo_principal()
     st.title("Análisis Salarial Personal Fuera de Convenio")
 
@@ -454,190 +550,127 @@ if page == "Sueldos FC":
     else:
         st.markdown("No hay datos suficientes para generar una conclusión. Ajuste los filtros para incluir más datos.")
 
-# --- Página: Tabla Salarial ---
-elif page == "Tabla Salarial":
+# --- Página: Sueldos Todos ---
+elif page == "Sueldos Todos":
     mostrar_titulo_principal()
-    st.title("Consulta de Tabla Salarial")
+    st.title("Análisis Salarial Personal Clusterciar")
 
     @st.cache_data
-    def load_tabla_salarial():
-        return pd.read_excel("tabla salarial.xlsx", sheet_name=0)
+    def load_sueldos_data():
+        try:
+            return pd.read_excel("sueldos.xlsx", sheet_name=0)
+        except Exception as e:
+            st.error(f"Error al intentar cargar sueldos.xlsx: {str(e)}")
+            return None
 
-    try:
-        df_tabla = load_tabla_salarial()
-    except FileNotFoundError:
-        st.error("No se encontró el archivo tabla salarial.xlsx")
+    df = load_sueldos_data()
+    if df is None:
+        st.error("No se pudo cargar el archivo sueldos.xlsx. Verifica que el archivo exista y sea accesible.")
         st.stop()
 
-    df_tabla.columns = df_tabla.columns.str.strip().str.replace(' ', '_')
+    df.columns = df.columns.str.strip().str.replace(' ', '_').str.lower()
 
-    puestos = sorted(df_tabla['Puesto'].unique())
-    seniorities = sorted(df_tabla['Seniority'].unique())
-    locaciones = sorted(df_tabla['Locacion'].unique())
+    if 'conveniocategoria' in df.columns:
+        df = df.rename(columns={'conveniocategoria': 'categoria'})
 
-    st.subheader("Comparativa de Valores Salariales")
-
-    st.markdown("**Primera Selección**")
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        selected_puesto_1 = st.selectbox("Selecciona un Puesto (1)", puestos, key="puesto_1")
-    with col2:
-        selected_seniority_1 = st.selectbox("Selecciona un Seniority (1)", seniorities, key="seniority_1")
-    with col3:
-        selected_locacion_1 = st.selectbox("Selecciona una Locación (1)", locaciones, key="locacion_1")
-
-    df_selected_1 = df_tabla[
-        (df_tabla['Puesto'] == selected_puesto_1) &
-        (df_tabla['Seniority'] == selected_seniority_1) &
-        (df_tabla['Locacion'] == selected_locacion_1)
-    ]
-
-    if not df_selected_1.empty:
-        st.markdown(f"**Valores Salariales para {selected_puesto_1} - {selected_seniority_1} - {selected_locacion_1}**")
-        valores_1 = df_selected_1[['Q1', 'Q2', 'Q3', 'Q4', 'Q5']].iloc[0]
-        col1, col2, col3, col4, col5 = st.columns(5)
-        col1.metric("Q1", f"${valores_1['Q1']:,.0f}")
-        col2.metric("Q2", f"${valores_1['Q2']:,.0f}")
-        col3.metric("Q3", f"${valores_1['Q3']:,.0f}")
-        col4.metric("Q4", f"${valores_1['Q4']:,.0f}")
-        col5.metric("Q5", f"${valores_1['Q5']:,.0f}")
-    else:
-        st.warning(f"No se encontraron datos para {selected_puesto_1} con Seniority {selected_seniority_1} en Locación {selected_locacion_1}.")
-        valores_1 = None
-
-    st.markdown("**Segunda Selección**")
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        selected_puesto_2 = st.selectbox("Selecciona un Puesto (2)", puestos, key="puesto_2")
-    with col2:
-        selected_seniority_2 = st.selectbox("Selecciona un Seniority (2)", seniorities, key="seniority_2")
-    with col3:
-        selected_locacion_2 = st.selectbox("Selecciona una Locación (2)", locaciones, key="locacion_2")
-
-    df_selected_2 = df_tabla[
-        (df_tabla['Puesto'] == selected_puesto_2) &
-        (df_tabla['Seniority'] == selected_seniority_2) &
-        (df_tabla['Locacion'] == selected_locacion_2)
-    ]
-
-    if not df_selected_2.empty:
-        st.markdown(f"**Valores Salariales para {selected_puesto_2} - {selected_seniority_2} - {selected_locacion_2}**")
-        valores_2 = df_selected_2[['Q1', 'Q2', 'Q3', 'Q4', 'Q5']].iloc[0]
-        col1, col2, col3, col4, col5 = st.columns(5)
-        col1.metric("Q1", f"${valores_2['Q1']:,.0f}")
-        col2.metric("Q2", f"${valores_2['Q2']:,.0f}")
-        col3.metric("Q3", f"${valores_2['Q3']:,.0f}")
-        col4.metric("Q4", f"${valores_2['Q4']:,.0f}")
-        col5.metric("Q5", f"${valores_2['Q5']:,.0f}")
-    else:
-        st.warning(f"No se encontraron datos para {selected_puesto_2} con Seniority {selected_seniority_2} en Locación {selected_locacion_2}.")
-        valores_2 = None
-
-    if valores_1 is not None and valores_2 is not None:
-        st.markdown("### Comparativa de Sueldos")
-        promedio_1 = valores_1[['Q1', 'Q2', 'Q3', 'Q4', 'Q5']].mean()
-        promedio_2 = valores_2[['Q1', 'Q2', 'Q3', 'Q4', 'Q5']].mean()
-        if promedio_1 != 0:
-            porcentaje_diferencia = ((promedio_2 - promedio_1) / promedio_1) * 100
-            st.markdown(f"**Diferencia porcentual (basada en el promedio de Q1-Q5):** {porcentaje_diferencia:.2f}%")
-            if porcentaje_diferencia > 0:
-                st.write(f"El promedio de la segunda selección es {porcentaje_diferencia:.2f}% mayor que el de la primera.")
-            elif porcentaje_diferencia < 0:
-                st.write(f"El promedio de la segunda selección es {abs(porcentaje_diferencia):.2f}% menor que el de la primera.")
-            else:
-                st.write("No hay diferencia entre los promedios de las dos selecciones.")
+    # Normalizar columnas categóricas
+    categorical_columns = ['empresa', 'es_cvh', 'personaapellido', 'personanombre', 'comitente']
+    for col in categorical_columns:
+        if col in df.columns:
+            df[col] = df[col].astype(str).replace(['#Ref', 'nan', ''], 'Sin dato').replace('nan', 'Sin dato')
         else:
-            st.warning("No se puede calcular el porcentaje de diferencia porque el promedio de la primera selección es 0.")
-    elif valores_1 is None or valores_2 is None:
-        st.warning("No se puede calcular la diferencia porque una o ambas selecciones no tienen datos.")
+            df[col] = 'Sin dato'
 
-    st.markdown("### Descargar Tabla Salarial Completa")
-    col1, col2 = st.columns(2)
-    with col1:
-        csv = df_tabla.to_csv(index=False).encode('utf-8')
-        st.download_button(
-            label="Descargar tabla salarial completa como CSV",
-            data=csv,
-            file_name='tabla_salarial.csv',
-            mime='text/csv',
-        )
-    with col2:
-        output = io.BytesIO()
-        with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
-            df_tabla.to_excel(writer, index=False, sheet_name='Tabla Salarial')
-        excel_data = output.getvalue()
-        st.download_button(
-            label="Descargar tabla salarial completa como Excel",
-            data=excel_data,
-            file_name='tabla_salarial.xlsx',
-            mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        )
+    # Crear columna combinada apellido_nombre
+    df['apellido_nombre'] = df['personaapellido'] + ' ' + df['personanombre']
 
-# --- Página: Análisis de Legajos ---
-elif page == "Análisis de Legajos":
-    mostrar_titulo_principal()
-    st.title("Análisis de Legajos")
+    # Normalizar columnas numéricas
+    numeric_columns = ['total_sueldo_bruto', 'neto', 'total_costo_laboral']
+    for col in numeric_columns:
+        if col in df.columns:
+            df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
+        else:
+            df[col] = 0
 
-    @st.cache_data
-    def load_analisis_legajos():
-        return pd.read_excel("Análisis de legajos.xlsx", sheet_name=0)
-
-    try:
-        df_legajos = load_analisis_legajos()
-    except FileNotFoundError:
-        st.error("No se encontró el archivo Análisis de legajos.xlsx")
-        st.stop()
-
-    df_legajos.columns = df_legajos.columns.str.strip().str.replace(' ', '_')
-
-    categorical_columns = [col for col in df_legajos.columns if df_legajos[col].dtype == 'object']
-    for col in categorical_columns:
-        df_legajos[col] = df_legajos[col].astype(str).replace(['#Ref', 'nan'], '')
-
-    date_columns = [col for col in df_legajos.columns if 'fecha' in col.lower() or 'date' in col.lower()]
-    for col in date_columns:
-        df_legajos[col] = pd.to_datetime(df_legajos[col], errors='coerce')
-
-    st.sidebar.header("Filtros")
+    # Filtros
+    st.subheader("Filtros")
     filtros = {}
-    for col in categorical_columns:
-        if col in df_legajos.columns:
-            filtros[col] = st.sidebar.multiselect(col.replace('_', ' ').title(), df_legajos[col].unique())
+    filter_columns = ['empresa', 'es_cvh', 'apellido_nombre', 'comitente']
+    for col in filter_columns:
+        if col in df.columns:
+            unique_values = [x for x in df[col].dropna().unique() if str(x).strip() != 'Sin dato Sin dato']
+            if len(unique_values) > 0:
+                label = col.replace('_', ' ').title()
+                filtros[col] = st.multiselect(f"{label}", unique_values, key=f"filter_{col}_sueldos")
+            else:
+                filtros[col] = []
         else:
             filtros[col] = []
 
-    df_filtered = df_legajos.copy()
+    # Aplicar filtros
+    df_filtered = df.copy()
     for key, values in filtros.items():
         if values:
             df_filtered = df_filtered[df_filtered[key].isin(values)]
 
-    st.subheader("Resumen General - Análisis de Legajos")
+    # Mostrar resultados
+    st.subheader("Resumen General - Sueldos")
     if len(df_filtered) > 0:
-        st.metric("Total Registros", len(df_filtered))
+        # Calcular las métricas solicitadas
+        cantidad_personas = len(df_filtered)
+        total_sueldo_bruto = df_filtered['total_sueldo_bruto'].sum()
+        total_sueldo_neto = df_filtered['neto'].sum()
+        total_costo_laboral = df_filtered['total_costo_laboral'].sum()
+        sueldo_bruto_promedio = total_sueldo_bruto / cantidad_personas if cantidad_personas > 0 else 0
+        sueldo_neto_promedio = total_sueldo_neto / cantidad_personas if cantidad_personas > 0 else 0
+        costo_laboral_promedio = total_costo_laboral / cantidad_personas if cantidad_personas > 0 else 0
+
+        # Mostrar las métricas en el orden solicitado
+        col1, col2, col3, col4 = st.columns(4)
+        col1.metric("Cantidad de Personas", cantidad_personas)
+        col2.metric("Total Sueldo Bruto", f"${total_sueldo_bruto:,.0f}")
+        col3.metric("Total Sueldo Neto", f"${total_sueldo_neto:,.0f}")
+        col4.metric("Total Costo Laboral", f"${total_costo_laboral:,.0f}")
+
+        col5, col6, col7 = st.columns(3)
+        col5.metric("Sueldo Bruto Promedio", f"${sueldo_bruto_promedio:,.0f}")
+        col6.metric("Sueldo Neto Promedio", f"${sueldo_neto_promedio:,.0f}")
+        col7.metric("Costo Laboral Promedio", f"${costo_laboral_promedio:,.0f}")
+
+        st.subheader("Tabla de Datos Filtrados")
+        display_columns = ['empresa', 'es_cvh', 'apellido_nombre', 'comitente', 'total_sueldo_bruto', 'neto', 'total_costo_laboral']
+        st.dataframe(df_filtered[display_columns].rename(columns={
+            'empresa': 'Empresa',
+            'es_cvh': 'Cvh',
+            'apellido_nombre': 'Apellido nombre',
+            'comitente': 'Comitente',
+            'total_sueldo_bruto': 'Total Sueldo Bruto',
+            'neto': 'Neto',
+            'total_costo_laboral': 'Total Costo Laboral'
+        }))
+
+        # Exportar a CSV
+        csv = df_filtered[display_columns].to_csv(index=False).encode('utf-8')
+        st.download_button(
+            label="Descargar datos filtrados como CSV",
+            data=csv,
+            file_name='sueldos_filtrados.csv',
+            mime='text/csv',
+        )
+
+        # Exportar a Excel
+        output = io.BytesIO()
+        with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+            df_filtered[display_columns].to_excel(writer, index=False, sheet_name='Datos Filtrados')
+        excel_data = output.getvalue()
+        st.download_button(
+            label="Descargar datos filtrados como Excel",
+            data=excel_data,
+            file_name='sueldos_filtrados.xlsx',
+            mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        )
     else:
         st.info("No hay datos disponibles con los filtros actuales.")
-
-    st.subheader("Tabla de Datos Filtrados")
-    st.dataframe(df_filtered)
-
-    csv = df_filtered.to_csv(index=False).encode('utf-8')
-    st.download_button(
-        label="Descargar datos filtrados como CSV",
-        data=csv,
-        file_name='analisis_legajos_filtrados.csv',
-        mime='text/csv',
-    )
-
-    output = io.BytesIO()
-    with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
-        df_filtered.to_excel(writer, index=False, sheet_name='Datos Filtrados')
-    excel_data = output.getvalue()
-    st.download_button(
-        label="Descargar datos filtrados como Excel",
-        data=excel_data,
-        file_name='analisis_legajos_filtrados.xlsx',
-        mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-    )
 
 # --- Página: Comparar Personas ---
 elif page == "Comparar Personas":
@@ -792,153 +825,121 @@ elif page == "Comparar Personas":
         else:
             st.warning("No hay datos disponibles para comparar con los filtros seleccionados.")
 
-# --- Página: Sueldos Todos ---
-elif page == "Sueldos Todos":
+# --- Página: Tabla Salarial ---
+elif page == "Tabla Salarial":
     mostrar_titulo_principal()
-    st.title("Análisis Salarial Personal Clusterciar")
+    st.title("Consulta de Tabla Salarial")
 
     @st.cache_data
-    def load_sueldos_data():
-        try:
-            return pd.read_excel("sueldos.xlsx", sheet_name=0)
-        except Exception as e:
-            st.error(f"Error al intentar cargar sueldos.xlsx: {str(e)}")
-            return None
+    def load_tabla_salarial():
+        return pd.read_excel("tabla salarial.xlsx", sheet_name=0)
 
-    df = load_sueldos_data()
-    if df is None:
-        st.error("No se pudo cargar el archivo sueldos.xlsx. Verifica que el archivo exista y sea accesible.")
+    try:
+        df_tabla = load_tabla_salarial()
+    except FileNotFoundError:
+        st.error("No se encontró el archivo tabla salarial.xlsx")
         st.stop()
 
-    df.columns = df.columns.str.strip().str.replace(' ', '_').str.lower()
+    df_tabla.columns = df_tabla.columns.str.strip().str.replace(' ', '_')
 
-    if 'conveniocategoria' in df.columns:
-        df = df.rename(columns={'conveniocategoria': 'categoria'})
+    puestos = sorted(df_tabla['Puesto'].unique())
+    seniorities = sorted(df_tabla['Seniority'].unique())
+    locaciones = sorted(df_tabla['Locacion'].unique())
 
-    # Normalizar columnas categóricas
-    categorical_columns = ['empresa', 'es_cvh', 'personaapellido', 'personanombre', 'comitente']
-    for col in categorical_columns:
-        if col in df.columns:
-            df[col] = df[col].astype(str).replace(['#Ref', 'nan', ''], 'Sin dato').replace('nan', 'Sin dato')
-        else:
-            df[col] = 'Sin dato'
+    st.subheader("Comparativa de Valores Salariales")
 
-    # Crear columna combinada apellido_nombre
-    df['apellido_nombre'] = df['personaapellido'] + ' ' + df['personanombre']
+    st.markdown("**Primera Selección**")
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        selected_puesto_1 = st.selectbox("Selecciona un Puesto (1)", puestos, key="puesto_1")
+    with col2:
+        selected_seniority_1 = st.selectbox("Selecciona un Seniority (1)", seniorities, key="seniority_1")
+    with col3:
+        selected_locacion_1 = st.selectbox("Selecciona una Locación (1)", locaciones, key="locacion_1")
 
-    # Normalizar columnas numéricas
-    numeric_columns = ['total_sueldo_bruto', 'neto', 'total_costo_laboral']
-    for col in numeric_columns:
-        if col in df.columns:
-            df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
-        else:
-            df[col] = 0
+    df_selected_1 = df_tabla[
+        (df_tabla['Puesto'] == selected_puesto_1) &
+        (df_tabla['Seniority'] == selected_seniority_1) &
+        (df_tabla['Locacion'] == selected_locacion_1)
+    ]
 
-    # Filtros
-    st.subheader("Filtros")
-    filtros = {}
-    filter_columns = ['empresa', 'es_cvh', 'apellido_nombre', 'comitente']
-    for col in filter_columns:
-        if col in df.columns:
-            unique_values = [x for x in df[col].dropna().unique() if str(x).strip() != 'Sin dato Sin dato']
-            if len(unique_values) > 0:
-                label = col.replace('_', ' ').title()
-                filtros[col] = st.multiselect(f"{label}", unique_values, key=f"filter_{col}_sueldos")
+    if not df_selected_1.empty:
+        st.markdown(f"**Valores Salariales para {selected_puesto_1} - {selected_seniority_1} - {selected_locacion_1}**")
+        valores_1 = df_selected_1[['Q1', 'Q2', 'Q3', 'Q4', 'Q5']].iloc[0]
+        col1, col2, col3, col4, col5 = st.columns(5)
+        col1.metric("Q1", f"${valores_1['Q1']:,.0f}")
+        col2.metric("Q2", f"${valores_1['Q2']:,.0f}")
+        col3.metric("Q3", f"${valores_1['Q3']:,.0f}")
+        col4.metric("Q4", f"${valores_1['Q4']:,.0f}")
+        col5.metric("Q5", f"${valores_1['Q5']:,.0f}")
+    else:
+        st.warning(f"No se encontraron datos para {selected_puesto_1} con Seniority {selected_seniority_1} en Locación {selected_locacion_1}.")
+        valores_1 = None
+
+    st.markdown("**Segunda Selección**")
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        selected_puesto_2 = st.selectbox("Selecciona un Puesto (2)", puestos, key="puesto_2")
+    with col2:
+        selected_seniority_2 = st.selectbox("Selecciona un Seniority (2)", seniorities, key="seniority_2")
+    with col3:
+        selected_locacion_2 = st.selectbox("Selecciona una Locación (2)", locaciones, key="locacion_2")
+
+    df_selected_2 = df_tabla[
+        (df_tabla['Puesto'] == selected_puesto_2) &
+        (df_tabla['Seniority'] == selected_seniority_2) &
+        (df_tabla['Locacion'] == selected_locacion_2)
+    ]
+
+    if not df_selected_2.empty:
+        st.markdown(f"**Valores Salariales para {selected_puesto_2} - {selected_seniority_2} - {selected_locacion_2}**")
+        valores_2 = df_selected_2[['Q1', 'Q2', 'Q3', 'Q4', 'Q5']].iloc[0]
+        col1, col2, col3, col4, col5 = st.columns(5)
+        col1.metric("Q1", f"${valores_2['Q1']:,.0f}")
+        col2.metric("Q2", f"${valores_2['Q2']:,.0f}")
+        col3.metric("Q3", f"${valores_2['Q3']:,.0f}")
+        col4.metric("Q4", f"${valores_2['Q4']:,.0f}")
+        col5.metric("Q5", f"${valores_2['Q5']:,.0f}")
+    else:
+        st.warning(f"No se encontraron datos para {selected_puesto_2} con Seniority {selected_seniority_2} en Locación {selected_locacion_2}.")
+        valores_2 = None
+
+    if valores_1 is not None and valores_2 is not None:
+        st.markdown("### Comparativa de Sueldos")
+        promedio_1 = valores_1[['Q1', 'Q2', 'Q3', 'Q4', 'Q5']].mean()
+        promedio_2 = valores_2[['Q1', 'Q2', 'Q3', 'Q4', 'Q5']].mean()
+        if promedio_1 != 0:
+            porcentaje_diferencia = ((promedio_2 - promedio_1) / promedio_1) * 100
+            st.markdown(f"**Diferencia porcentual (basada en el promedio de Q1-Q5):** {porcentaje_diferencia:.2f}%")
+            if porcentaje_diferencia > 0:
+                st.write(f"El promedio de la segunda selección es {porcentaje_diferencia:.2f}% mayor que el de la primera.")
+            elif porcentaje_diferencia < 0:
+                st.write(f"El promedio de la segunda selección es {abs(porcentaje_diferencia):.2f}% menor que el de la primera.")
             else:
-                filtros[col] = []
+                st.write("No hay diferencia entre los promedios de las dos selecciones.")
         else:
-            filtros[col] = []
+            st.warning("No se puede calcular el porcentaje de diferencia porque el promedio de la primera selección es 0.")
+    elif valores_1 is None or valores_2 is None:
+        st.warning("No se puede calcular la diferencia porque una o ambas selecciones no tienen datos.")
 
-    # Aplicar filtros
-    df_filtered = df.copy()
-    for key, values in filtros.items():
-        if values:
-            df_filtered = df_filtered[df_filtered[key].isin(values)]
-
-    # Mostrar resultados
-    st.subheader("Resumen General - Sueldos")
-    if len(df_filtered) > 0:
-        # Calcular las métricas solicitadas
-        cantidad_personas = len(df_filtered)
-        total_sueldo_bruto = df_filtered['total_sueldo_bruto'].sum()
-        total_sueldo_neto = df_filtered['neto'].sum()
-        total_costo_laboral = df_filtered['total_costo_laboral'].sum()
-        sueldo_bruto_promedio = total_sueldo_bruto / cantidad_personas if cantidad_personas > 0 else 0
-        sueldo_neto_promedio = total_sueldo_neto / cantidad_personas if cantidad_personas > 0 else 0
-        costo_laboral_promedio = total_costo_laboral / cantidad_personas if cantidad_personas > 0 else 0
-
-        # Mostrar las métricas en el orden solicitado
-        col1, col2, col3, col4 = st.columns(4)
-        col1.metric("Cantidad de Personas", cantidad_personas)
-        col2.metric("Total Sueldo Bruto", f"${total_sueldo_bruto:,.0f}")
-        col3.metric("Total Sueldo Neto", f"${total_sueldo_neto:,.0f}")
-        col4.metric("Total Costo Laboral", f"${total_costo_laboral:,.0f}")
-
-        col5, col6, col7 = st.columns(3)
-        col5.metric("Sueldo Bruto Promedio", f"${sueldo_bruto_promedio:,.0f}")
-        col6.metric("Sueldo Neto Promedio", f"${sueldo_neto_promedio:,.0f}")
-        col7.metric("Costo Laboral Promedio", f"${costo_laboral_promedio:,.0f}")
-
-        st.subheader("Tabla de Datos Filtrados")
-        display_columns = ['empresa', 'es_cvh', 'apellido_nombre', 'comitente', 'total_sueldo_bruto', 'neto', 'total_costo_laboral']
-        st.dataframe(df_filtered[display_columns].rename(columns={
-            'empresa': 'Empresa',
-            'es_cvh': 'Cvh',
-            'apellido_nombre': 'Apellido nombre',
-            'comitente': 'Comitente',
-            'total_sueldo_bruto': 'Total Sueldo Bruto',
-            'neto': 'Neto',
-            'total_costo_laboral': 'Total Costo Laboral'
-        }))
-
-        # Exportar a CSV
-        csv = df_filtered[display_columns].to_csv(index=False).encode('utf-8')
+    st.markdown("### Descargar Tabla Salarial Completa")
+    col1, col2 = st.columns(2)
+    with col1:
+        csv = df_tabla.to_csv(index=False).encode('utf-8')
         st.download_button(
-            label="Descargar datos filtrados como CSV",
+            label="Descargar tabla salarial completa como CSV",
             data=csv,
-            file_name='sueldos_filtrados.csv',
+            file_name='tabla_salarial.csv',
             mime='text/csv',
         )
-
-        # Exportar a Excel
+    with col2:
         output = io.BytesIO()
         with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
-            df_filtered[display_columns].to_excel(writer, index=False, sheet_name='Datos Filtrados')
+            df_tabla.to_excel(writer, index=False, sheet_name='Tabla Salarial')
         excel_data = output.getvalue()
         st.download_button(
-            label="Descargar datos filtrados como Excel",
+            label="Descargar tabla salarial completa como Excel",
             data=excel_data,
-            file_name='sueldos_filtrados.xlsx',
+            file_name='tabla_salarial.xlsx',
             mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
         )
-    else:
-        st.info("No hay datos disponibles con los filtros actuales.")
-
-# --- Página: Indicadores ---
-elif page == "Indicadores":
-    mostrar_titulo_principal()
-    st.title("Indicadores")
-    
-    # Mostrar la página web en un iframe
-    url = "https://indicadores-ddp-l78n7xs.gamma.site/"
-    iframe(url, height=600, scrolling=True)
-
-    # Botón para descargar el archivo Indicadores DDP.pdf
-    st.markdown("### Descargar Indicadores")
-    try:
-        with open("Indicadores DDP.pdf", "rb") as f:
-            st.download_button(
-                label="Descargar Indicadores DDP.pdf",
-                data=f.read(),
-                file_name="Indicadores DDP.pdf",
-                mime="application/pdf"
-            )
-    except FileNotFoundError:
-        st.error("No se encontró el archivo Indicadores DDP.pdf. Asegúrate de que esté en el directorio raíz del repositorio.")
-
-# --- Página: Novedades DDP ---
-elif page == "Novedades DDP":
-    mostrar_titulo_principal()
-    st.title("Novedades DDP")
-    # Aquí puedes agregar el contenido para la página "Novedades DDP"
-    st.write("Contenido pendiente para la página de Novedades DDP.")
