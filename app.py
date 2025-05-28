@@ -117,6 +117,19 @@ if page == "Novedades DDP":
     url = "https://informe-acciones-ddp-202-7ubaaqk.gamma.site/"
     iframe(url, height=600, scrolling=True)
 
+    # Botón para descargar el archivo Novedades DDP.pdf
+    st.markdown("### Descargar Novedades")
+    try:
+        with open("Novedades DDP.pdf", "rb") as f:
+            st.download_button(
+                label="Descargar Novedades DDP.pdf",
+                data=f.read(),
+                file_name="Novedades DDP.pdf",
+                mime="application/pdf"
+            )
+    except FileNotFoundError:
+        st.error("No se encontró el archivo Novedades DDP.pdf. Asegúrate de que esté en el directorio raíz del repositorio.")
+
 # --- Página: Indicadores ---
 elif page == "Indicadores":
     mostrar_titulo_principal()
