@@ -9,8 +9,16 @@ import tempfile
 import os
 from streamlit.components.v1 import iframe
 
-# Configuración de la página (debe ser la primera llamada)
-st.set_page_config(page_title="DDP 2025", layout="wide")
+# Configuración de la página (debe ser la primera llamada de Streamlit)
+st.set_page_config(
+    page_title="DDP 2025",
+    layout="wide",
+    menu_items={
+        'Get Help': None,  # Oculta la opción "Get Help"
+        'Report a Bug': None,  # Oculta la opción "Report a Bug"
+        'About': None  # Oculta la opción "About"
+    }
+)
 
 # CSS personalizado con fuente Red Hat Display y diseño responsive
 st.markdown(
@@ -27,6 +35,17 @@ st.markdown(
     .stApp {
         max-width: 100%;
         margin: 0 auto;
+    }
+
+    /* Ocultar el sidebar completamente */
+    [data-testid="stSidebar"] {
+        display: none !important;
+    }
+
+    /* Ajustar el contenido principal para que ocupe todo el espacio */
+    [data-testid="stAppViewContainer"] {
+        margin-left: 0 !important;
+        width: 100% !important;
     }
 
     /* Menú lateral responsive */
@@ -97,9 +116,9 @@ except FileNotFoundError:
 def mostrar_titulo_principal():
     st.markdown("<h1 style='text-align: center;'>Dirección de Desarrollo de las Personas</h1>", unsafe_allow_html=True)
 
-# Menú principal para seleccionar la página
-st.sidebar.title("DDP 2025")
-page = st.sidebar.selectbox("Selecciona una página", [
+# Menú principal para seleccionar la página (lo movemos al cuerpo principal porque ocultamos el sidebar)
+st.title("DDP 2025")
+page = st.selectbox("Selecciona una página", [
     "Novedades DDP",
     "Indicadores",
     "Análisis de Legajos",
@@ -177,11 +196,11 @@ elif page == "Análisis de Legajos":
     for col in date_columns:
         df_legajos[col] = pd.to_datetime(df_legajos[col], errors='coerce')
 
-    st.sidebar.header("Filtros")
+    st.header("Filtros")
     filtros = {}
     for col in categorical_columns:
         if col in df_legajos.columns:
-            filtros[col] = st.sidebar.multiselect(col.replace('_', ' ').title(), df_legajos[col].unique())
+            filtros[col] = st.multiselect(col.replace('_', ' ').title(), df_legajos[col].unique())
         else:
             filtros[col] = []
 
@@ -246,6 +265,8 @@ elif page == "Sueldos FC":
     for col in categorical_columns:
         if col in df.columns:
             df[col] = df[col].astype(str).replace(['#Ref', 'nan'], '')
+        else:
+            df[col] = ''
 
     # Convertir columnas de fecha
     date_columns = ['Fecha_de_Ingreso', 'Fecha_de_nacimiento']
@@ -258,8 +279,8 @@ elif page == "Sueldos FC":
         df['Porcentaje_Banda_Salarial'] = pd.to_numeric(df['Porcentaje_Banda_Salarial'], errors='coerce')
         df['Porcentaje_Banda_Salarial'] = df['Porcentaje_Banda_Salarial'].apply(lambda x: x / 100 if x > 1 else x)
 
-    # Filtros en la barra lateral
-    st.sidebar.header("Filtros")
+    # Filtros en el cuerpo principal (ya que el sidebar está oculto)
+    st.header("Filtros")
     filtros = {}
     filter_columns = [
         'Empresa', 'CCT', 'Grupo', 'Comitente', 'Puesto', 'seniority', 'Gerencia', 'CVH',
@@ -271,9 +292,9 @@ elif page == "Sueldos FC":
             label = "Apellido" if col == "Personaapellido" else "Nombre" if col == "Personanombre" else col.replace('_', ' ').title()
             unique_values = df[col].dropna().unique()
             if len(unique_values) > 0:
-                filtros[col] = st.sidebar.multiselect(label, unique_values)
+                filtros[col] = st.multiselect(label, unique_values)
             else:
-                st.sidebar.warning(f"No hay valores válidos para filtrar por {label}")
+                st.warning(f"No hay valores válidos para filtrar por {label}")
                 filtros[col] = []
         else:
             filtros[col] = []
@@ -797,7 +818,7 @@ elif page == "Comparar Personas":
                 sueldo_1 = float(df_persona_1['Total_sueldo_bruto'].iloc[0])
                 sueldo_2 = float(df_persona_2['Total_sueldo_bruto'].iloc[0])
                 if sueldo_1 != 0:
-                    diferencia_porcentual = ((sueldo_2 - sueldo_1) / sueldo_1) * 100
+                    diferencia_porcentual = ((sueldo_2 - sueldo_1) /0) * 100
                     st.markdown(f"**Diferencia porcentual en sueldo bruto:** {diferencia_porcentual:.2f}%")
                     if diferencia_porcentual > 0:
                         st.write(f"El sueldo de {persona_2} es {diferencia_porcentual:.2f}% mayor que el de {persona_1}.")
