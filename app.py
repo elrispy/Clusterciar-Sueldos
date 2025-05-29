@@ -1,4 +1,3 @@
-```python
 import streamlit as st
 import pandas as pd
 import numpy as np
@@ -25,10 +24,10 @@ st.set_page_config(
 st.markdown(
     """
     <style>
-    @import url('https://fonts.googleapis.com/css2?family=Red+Hat+Text:wght@400;500;700&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Red+Hat+Display:wght@400;500;700&display=swap');
 
     * {
-        font-family = 'Red Hat Display', sans-serif !important;
+        font-family: 'Red Hat Display', sans-serif !important;
     }
 
     .stApp {
@@ -37,67 +36,64 @@ st.markdown(
     }
 
     [data-testid="stSidebar"] {
-        display: block !important;
-        width: 250px !important;
-        min-width: 250px !important;
-        position: fixed;
-        left: 0;
-        top: 0;
-        bottom: 0;
-        background-color: #f8f9fa;
-        padding: 20px;
-        overflow-y: auto;
-        z-index: 1000;
+        display: none !important;
     }
 
     [data-testid="stAppViewContainer"] {
-        margin-left: 270px !important;
-        padding-right: 20px !important;
-        width: calc(100% - 290px) !important;
+        margin-left: 0 !important;
+        width: 100% !important;
     }
 
-    .main-content {
-        max-width: 1200px;
-        margin: 0 auto;
-        padding-left: 20px;
+    .sidebar .sidebar-content {
+        padding: 10px;
     }
-
     @media (max-width: 768px) {
-        [data-testid="stSidebar"] {
+        .sidebar .sidebar-content {
+            width: 100%;
+            position: relative;
+            height: auto;
+            padding: 5px;
+        }
+        .sidebar .sidebar-content .stSelectbox {
+            width: 90%;
+            margin: 5px auto;
+        }
+        .sidebar .sidebar-content .stButton {
+            width: 90%;
+            margin: 5px auto;
+        }
+        .stApp [data-testid="stSidebar"] {
             width: 100% !important;
-            position: relative !important;
-            height: auto !important;
-            padding: 10px !important;
+            position: relative;
         }
-        [data-testid="stAppViewContainer"] {
-            margin-left: 0 !important;
+        .css-1d8v2e5 {
+            flex-direction: column !important;
+        }
+        .css-1d8v2e5 > div {
             width: 100% !important;
-            padding-right: 10px !important;
-        }
-        .main-content {
-            padding-left: 10px !important;
-        }
-        .stButton>button {
-            padding: 8px 16px;
-            font-size: 14px;
-        }
-        .stSelectbox>select {
-            padding: 8px;
-            font-size: 14px;
-        }
-        .stTextInput>div>input {
-            padding: 8px;
-            font-size: 14px;
+            margin-bottom: 10px;
         }
         .stMetric {
-            font-size: 12px !important;
+            font-size: 14px !important;
         }
         .stMarkdown {
-            font-size: 14px !important;
+            font-size: 16px !important;
         }
         .altair-chart {
             width: 100% !important;
             height: auto !important;
+        }
+        .stButton>button {
+            padding: 10px 20px;
+            font-size: 16px;
+        }
+        .stSelectbox>select {
+            padding: 10px;
+            font-size: 16px;
+        }
+        .stTextInput>div>input {
+            padding: 10px;
+            font-size: 16px;
         }
     }
     </style>
@@ -129,7 +125,7 @@ def login_form():
             if check_credentials(username, password):
                 st.session_state.authenticated = True
                 st.success("Inicio de sesión exitoso")
-                st.rerun()
+                st.rerun()  # Recargar la página para mostrar el contenido
             else:
                 st.error("Usuario o contraseña incorrectos")
 
@@ -222,56 +218,64 @@ else:
         for col in date_columns:
             df_legajos[col] = pd.to_datetime(df_legajos[col], errors='coerce')
 
-        # Filtros en el sidebar
-        with st.sidebar:
-            st.header("Filtros")
-            filtros = {}
-            for col in categorical_columns:
-                if col in df_legajos.columns:
-                    label = col.replace('_', ' ').title()
-                    unique_values = [x for x in df_legajos[col].unique() if x]
-                    filtros[col] = st.multiselect(label, unique_values, key=f"filter_{col}_legajos")
-                else:
-                    filtros[col] = []
-
-        # Contenido principal
+        st.header("Filtros")
         with st.container():
-            st.markdown('<div class="main-content">', unsafe_allow_html=True)
+            col1, col2 = st.columns(2)
+            filtros = {}
+            mitad = len(categorical_columns) // 2
+            filtros_izq = categorical_columns[:mitad]
+            filtros_der = categorical_columns[mitad:]
+
+            with col1:
+                for col in filtros_izq:
+                    if col in df_legajos.columns:
+                        label = col.replace('_', ' ').title()
+                        unique_values = [x for x in df_legajos[col].unique() if x]
+                        filtros[col] = st.multiselect(label, unique_values, key=f"filter_{col}_legajos")
+                    else:
+                        filtros[col] = []
             
-            df_filtered = df_legajos.copy()
-            for key, values in filtros.items():
-                if values:
-                    df_filtered = df_filtered[df_filtered[key].isin(values)]
+            with col2:
+                for col in filtros_der:
+                    if col in df_legajos.columns:
+                        label = col.replace('_', ' ').title()
+                        unique_values = [x for x in df_legajos[col].unique() if x]
+                        filtros[col] = st.multiselect(label, unique_values, key=f"filter_{col}_legajos")
+                    else:
+                        filtros[col] = []
 
-            st.subheader("Resumen General - Análisis de Legajos")
-            if len(df_filtered) > 0:
-                st.metric("Total Registros", len(df_filtered))
-            else:
-                st.info("No hay datos disponibles con los filtros actuales.")
+        df_filtered = df_legajos.copy()
+        for key, values in filtros.items():
+            if values:
+                df_filtered = df_filtered[df_filtered[key].isin(values)]
 
-            st.subheader("Tabla de Datos Filtrados")
-            st.dataframe(df_filtered)
+        st.subheader("Resumen General - Análisis de Legajos")
+        if len(df_filtered) > 0:
+            st.metric("Total Registros", len(df_filtered))
+        else:
+            st.info("No hay datos disponibles con los filtros actuales.")
 
-            csv = df_filtered.to_csv(index=False).encode('utf-8')
-            st.download_button(
-                label="Descargar datos filtrados como CSV",
-                data=csv,
-                file_name='analisis_legajos_filtrados.csv',
-                mime='text/csv',
-            )
+        st.subheader("Tabla de Datos Filtrados")
+        st.dataframe(df_filtered)
 
-            output = io.BytesIO()
-            with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
-                df_filtered.to_excel(writer, index=False, sheet_name='Datos Filtrados')
-            excel_data = output.getvalue()
-            st.download_button(
-                label="Descargar datos filtrados como Excel",
-                data=excel_data,
-                file_name='analisis_legajos_filtrados.xlsx',
-                mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-            )
+        csv = df_filtered.to_csv(index=False).encode('utf-8')
+        st.download_button(
+            label="Descargar datos filtrados como CSV",
+            data=csv,
+            file_name='analisis_legajos_filtrados.csv',
+            mime='text/csv',
+        )
 
-            st.markdown('</div>', unsafe_allow_html=True)
+        output = io.BytesIO()
+        with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+            df_filtered.to_excel(writer, index=False, sheet_name='Datos Filtrados')
+        excel_data = output.getvalue()
+        st.download_button(
+            label="Descargar datos filtrados como Excel",
+            data=excel_data,
+            file_name='analisis_legajos_filtrados.xlsx',
+            mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        )
 
     # --- Página: Sueldos FC ---
     elif page == "Sueldos FC":
@@ -309,304 +313,312 @@ else:
             df['Porcentaje_Banda_Salarial'] = pd.to_numeric(df['Porcentaje_Banda_Salarial'], errors='coerce')
             df['Porcentaje_Banda_Salarial'] = df['Porcentaje_Banda_Salarial'].apply(lambda x: x / 100 if x > 1 else x)
 
-        # Filtros en el sidebar
-        with st.sidebar:
-            st.header("Filtros")
+        st.header("Filtros")
+        with st.container():
+            col1, col2 = st.columns(2)
             filtros = {}
             filter_columns = [
                 'Empresa', 'CCT', 'Grupo', 'Comitente', 'Puesto', 'seniority', 'Gerencia', 'CVH',
                 'Puesto_tabla_salarial', 'Locacion', 'Centro_de_Costos', 'Especialidad', 'Superior',
                 'Personaapellido', 'Personanombre'
             ]
-            for col in filter_columns:
-                if col in df.columns:
-                    label = "Apellido" if col == "Personaapellido" else "Nombre" if col == "Personanombre" else col.replace('_', ' ').title()
-                    unique_values = [x for x in df[col].dropna().unique() if x]
-                    filtros[col] = st.multiselect(label, unique_values, key=f"filter_{col}_sueldos_fc")
-                else:
-                    filtros[col] = []
+            mitad = len(filter_columns) // 2
+            filtros_izq = filter_columns[:mitad]
+            filtros_der = filter_columns[mitad:]
 
-        # Contenido principal
-        with st.container():
-            st.markdown('<div class="main-content">', unsafe_allow_html=True)
-            
-            df_filtered = df.copy()
-            for key, values in filtros.items():
-                if values:
-                    df_filtered = df_filtered[df_filtered[key].isin(values)]
+            with col1:
+                for col in filtros_izq:
+                    if col in df.columns:
+                        label = "Apellido" if col == "Personaapellido" else "Nombre" if col == "Personanombre" else col.replace('_', ' ').title()
+                        unique_values = [x for x in df[col].dropna().unique() if x]
+                        filtros[col] = st.multiselect(label, unique_values, key=f"filter_{col}_sueldos_fc")
+                    else:
+                        filtros[col] = []
 
-            st.subheader("Resumen General - Sueldos para Informes")
-            if len(df_filtered) > 0:
-                promedio_sueldo = df_filtered['Total_sueldo_bruto'].mean() if 'Total_sueldo_bruto' in df_filtered.columns else 0
-                minimo_sueldo = df_filtered['Total_sueldo_bruto'].min() if 'Total_sueldo_bruto' in df_filtered.columns else 0
-                maximo_sueldo = df_filtered['Total_sueldo_bruto'].max() if 'Total_sueldo_bruto' in df_filtered.columns else 0
-                dispersion_sueldo = maximo_sueldo - minimo_sueldo
-                dispersion_porcentaje = (dispersion_sueldo / minimo_sueldo * 100) if minimo_sueldo > 0 else 0
-                costo_total = df_filtered['Costo_laboral'].sum() if 'Costo_laboral' in df_filtered.columns else 0
+            with col2:
+                for col in filtros_der:
+                    if col in df.columns:
+                        label = "Apellido" if col == "Personaapellido" else "Nombre" if col == "Personanombre" else col.replace('_', ' ').title()
+                        unique_values = [x for x in df[col].dropna().unique() if x]
+                        filtros[col] = st.multiselect(label, unique_values, key=f"filter_{col}_sueldos_fc")
+                    else:
+                        filtros[col] = []
 
-                if 'Especialidad' in df_filtered.columns:
-                    especialidad_dist = df_filtered['Especialidad'].value_counts(normalize=True) * 100
-                    especialidad_dist = especialidad_dist.reset_index()
-                    especialidad_dist.columns = ['Especialidad', 'Porcentaje']
-                else:
-                    especialidad_dist = pd.DataFrame()
+        df_filtered = df.copy()
+        for key, values in filtros.items():
+            if values:
+                df_filtered = df_filtered[df_filtered[key].isin(values)]
 
-                if 'Porcentaje_Banda_Salarial' in df_filtered.columns:
-                    banda_25 = len(df_filtered[df_filtered['Porcentaje_Banda_Salarial'] < 0.25]) / len(df_filtered) * 100
-                    banda_50 = len(df_filtered[df_filtered['Porcentaje_Banda_Salarial'] < 0.50]) / len(df_filtered) * 100
-                    banda_75 = len(df_filtered[df_filtered['Porcentaje_Banda_Salarial'] < 0.75]) / len(df_filtered) * 100
-                    banda_arriba_75 = len(df_filtered[df_filtered['Porcentaje_Banda_Salarial'] >= 0.75]) / len(df_filtered) * 100
-                else:
-                    banda_25 = banda_50 = banda_75 = banda_arriba_75 = 0
+        st.subheader("Resumen General - Sueldos para Informes")
+        if len(df_filtered) > 0:
+            promedio_sueldo = df_filtered['Total_sueldo_bruto'].mean() if 'Total_sueldo_bruto' in df_filtered.columns else 0
+            minimo_sueldo = df_filtered['Total_sueldo_bruto'].min() if 'Total_sueldo_bruto' in df_filtered.columns else 0
+            maximo_sueldo = df_filtered['Total_sueldo_bruto'].max() if 'Total_sueldo_bruto' in df_filtered.columns else 0
+            dispersion_sueldo = maximo_sueldo - minimo_sueldo
+            dispersion_porcentaje = (dispersion_sueldo / minimo_sueldo * 100) if minimo_sueldo > 0 else 0
+            costo_total = df_filtered['Costo_laboral'].sum() if 'Costo_laboral' in df_filtered.columns else 0
 
-                col1, col2, col3, col4 = st.columns(4)
-                col1.metric("Total Personas", len(df_filtered))
-                col2.metric("Sueldo Bruto Promedio", f"${promedio_sueldo:,.0f}")
-                col3.metric("Sueldo Mínimo", f"${minimo_sueldo:,.0f}")
-                col4.metric("Sueldo Máximo", f"${maximo_sueldo:,.0f}")
-
-                col5, col6 = st.columns(2)
-                col5.metric("Dispersión Salarial", f"${dispersion_sueldo:,.0f} ({dispersion_porcentaje:.1f}%)")
-                col6.metric("Costo Laboral Total", f"${costo_total:,.0f}")
-
-                if 'Porcentaje_Banda_Salarial' in df_filtered.columns:
-                    st.markdown("### Distribución de Bandas Salariales")
-                    banda_data = pd.DataFrame({
-                        'Categoría': ['< 25%', '25-50%', '50-75%', '≥ 75%'],
-                        'Porcentaje': [
-                            banda_25,
-                            banda_50 - banda_25,
-                            banda_75 - banda_50,
-                            banda_arriba_75
-                        ]
-                    })
-                    banda_chart = alt.Chart(banda_data).mark_arc().encode(
-                        theta=alt.Theta('Porcentaje:Q', stack=True),
-                        color=alt.Color('Categoría:N', legend=alt.Legend(title="Banda Salarial")),
-                        tooltip=['Categoría', alt.Tooltip('Porcentaje:Q', format='.1f')]
-                    ).properties(width=300, height=300)
-                    st.altair_chart(banda_chart, use_container_width=True)
-
-                    st.markdown("**Porcentajes por Banda Salarial**:")
-                    st.write(f"- Debajo del 25%: {banda_25:.1f}%")
-                    st.write(f"- Debajo del 50%: {banda_50:.1f}%")
-                    st.write(f"- Debajo del 75%: {banda_75:.1f}%")
-                    st.write(f"- Arriba del 75%: {banda_arriba_75:.1f}%")
-
+            if 'Especialidad' in df_filtered.columns:
+                especialidad_dist = df_filtered['Especialidad'].value_counts(normalize=True) * 100
+                especialidad_dist = especialidad_dist.reset_index()
+                especialidad_dist.columns = ['Especialidad', 'Porcentaje']
             else:
-                st.info("No hay datos disponibles con los filtros actuales.")
-                promedio_sueldo = minimo_sueldo = maximo_sueldo = dispersion_sueldo = dispersion_porcentaje = costo_total = 0
-                banda_25 = banda_50 = banda_75 = banda_arriba_75 = 0
                 especialidad_dist = pd.DataFrame()
 
-            st.markdown("### Comparación por Categoría")
-            agrupadores = [
-                'Empresa', 'CCT', 'Grupo', 'Comitente', 'Puesto', 'seniority', 'Gerencia', 'CVH',
-                'Puesto_tabla_salarial', 'Locacion', 'Centro_de_Costos', 'Especialidad', 'Superior'
-            ]
-            agrupadores = [col for col in agrupadores if col in df.columns]
-            grupo_seleccionado = st.selectbox("Selecciona una categoría para agrupar", agrupadores, index=agrupadores.index('Puesto_tabla_salarial') if 'Puesto_tabla_salarial' in agrupadores else 0)
-
-            if len(df_filtered) > 0:
-                if 'Total_sueldo_bruto' in df_filtered.columns:
-                    grouped_data = df_filtered.groupby(grupo_seleccionado).agg({
-                        'Total_sueldo_bruto': ['mean', 'min', 'max'],
-                        'seniority': 'count'
-                    }).reset_index()
-                    grouped_data.columns = [grupo_seleccionado, 'Sueldo_Promedio', 'Sueldo_Mínimo', 'Sueldo_Máximo', 'Cantidad']
-                    grouped_data = grouped_data.dropna(subset=[grupo_seleccionado, 'Sueldo_Promedio'])
-                    grouped_data[grupo_seleccionado] = grouped_data[grupo_seleccionado].astype(str)
-
-                    chart = alt.Chart(grouped_data).mark_bar().encode(
-                        x=alt.X(f"{grupo_seleccionado}:N", title=grupo_seleccionado, sort="-y"),
-                        y=alt.Y("Sueldo_Promedio:Q", title="Sueldo Bruto Promedio"),
-                        tooltip=[
-                            grupo_seleccionado,
-                            alt.Tooltip("Sueldo_Promedio:Q", title="Sueldo Promedio", format=",.0f"),
-                            alt.Tooltip("Sueldo_Mínimo:Q", title="Sueldo Mínimo", format=",.0f"),
-                            alt.Tooltip("Sueldo_Máximo:Q", title="Sueldo Máximo", format=",.0f")
-                        ]
-                    ).properties(height=400)
-                    st.altair_chart(chart, use_container_width=True)
-
-                if grupo_seleccionado == 'Puesto_tabla_salarial' and 'Puesto_tabla_salarial' in df_filtered.columns and 'seniority' in df_filtered.columns:
-                    st.markdown("### Distribución de Seniority por Puesto Tabla Salarial")
-                    puestos_opciones = ['Todos los puestos'] + sorted(df_filtered['Puesto_tabla_salarial'].unique().tolist())
-                    puesto_seleccionado = st.selectbox("Selecciona un Puesto Tabla Salarial", puestos_opciones)
-                    
-                    gerencias = sorted(df_filtered['Gerencia'].unique().tolist())
-                    gerencia_seleccionada = st.multiselect("Selecciona Gerencia(s)", gerencias, default=gerencias)
-
-                    if puesto_seleccionado == 'Todos los puestos':
-                        df_puesto = df_filtered[df_filtered['Gerencia'].isin(gerencia_seleccionada)]
-                    else:
-                        df_puesto = df_filtered[
-                            (df_filtered['Puesto_tabla_salarial'] == puesto_seleccionado) &
-                            (df_filtered['Gerencia'].isin(gerencia_seleccionada))
-                        ]
-
-                    if len(df_puesto) > 0:
-                        seniority_dist = df_puesto['seniority'].value_counts(normalize=True) * 100
-                        seniority_dist = seniority_dist.reset_index()
-                        seniority_dist.columns = ['Seniority', 'Porcentaje']
-
-                        seniority_chart = alt.Chart(seniority_dist).mark_arc().encode(
-                            theta=alt.Theta('Porcentaje:Q', stack=True),
-                            color=alt.Color('Seniority:N', legend=alt.Legend(title="Seniority")),
-                            tooltip=['Seniority', alt.Tooltip('Porcentaje:Q', format='.1f')]
-                        ).properties(width=300, height=300)
-                        st.altair_chart(seniority_chart, use_container_width=True)
-
-                        st.markdown("**Porcentajes de Seniority**:")
-                        for _, row in seniority_dist.iterrows():
-                            st.write(f"- {row['Seniority']}: {row['Porcentaje']:.1f}%")
-
-                        if puesto_seleccionado != 'Todos los puestos' and 'Total_sueldo_bruto' in df_puesto.columns:
-                            sueldo_stats = df_puesto['Total_sueldo_bruto'].agg(['min', 'mean', 'max']).round(0)
-                            st.markdown(f"**Sueldos para {puesto_seleccionado} (filtrado por Gerencia)**:")
-                            st.write(f"- Mínimo: ${sueldo_stats['min']:,.0f}")
-                            st.write(f"- Promedio: ${sueldo_stats['mean']:,.0f}")
-                            st.write(f"- Máximo: ${sueldo_stats['max']:,.0f}")
-                    else:
-                        st.warning("No hay datos para el puesto tabla salarial y gerencia seleccionados.")
-
-                if grupo_seleccionado == 'seniority' and 'seniority' in df_filtered.columns and 'Total_sueldo_bruto' in df_filtered.columns:
-                    sueldo_stats = grouped_data[['seniority', 'Sueldo_Mínimo', 'Sueldo_Promedio', 'Sueldo_Máximo']]
-                    st.markdown("**Sueldos por Seniority**:")
-                    st.dataframe(sueldo_stats)
-
-                # Distribución de Especialidad (reubicada)
-                if 'Especialidad' in df_filtered.columns:
-                    st.markdown("### Distribución de Especialidad")
-                    especialidad_chart = alt.Chart(especialidad_dist).mark_bar().encode(
-                        x=alt.X('Porcentaje:Q', title='Porcentaje (%)'),
-                        y=alt.Y('Especialidad:N', title='Especialidad', sort='-x'),
-                        tooltip=['Especialidad', alt.Tooltip('Porcentaje:Q', format='.1f')]
-                    ).properties(height=300)
-                    st.altair_chart(especialidad_chart, use_container_width=True)
-
+            if 'Porcentaje_Banda_Salarial' in df_filtered.columns:
+                banda_25 = len(df_filtered[df_filtered['Porcentaje_Banda_Salarial'] < 0.25]) / len(df_filtered) * 100
+                banda_50 = len(df_filtered[df_filtered['Porcentaje_Banda_Salarial'] < 0.50]) / len(df_filtered) * 100
+                banda_75 = len(df_filtered[df_filtered['Porcentaje_Banda_Salarial'] < 0.75]) / len(df_filtered) * 100
+                banda_arriba_75 = len(df_filtered[df_filtered['Porcentaje_Banda_Salarial'] >= 0.75]) / len(df_filtered) * 100
             else:
-                st.warning("No hay datos para mostrar en el gráfico de comparación por categoría.")
+                banda_25 = banda_50 = banda_75 = banda_arriba_75 = 0
 
-            st.subheader("Tabla de Datos Filtrados")
-            st.dataframe(df_filtered)
+            col1, col2, col3, col4 = st.columns(4)
+            col1.metric("Total Personas", len(df_filtered))
+            col2.metric("Sueldo Bruto Promedio", f"${promedio_sueldo:,.0f}")
+            col3.metric("Sueldo Mínimo", f"${minimo_sueldo:,.0f}")
+            col4.metric("Sueldo Máximo", f"${maximo_sueldo:,.0f}")
 
-            csv = df_filtered.to_csv(index=False).encode('utf-8')
-            st.download_button(
-                label="Descargar datos filtrados como CSV",
-                data=csv,
-                file_name='sueldos_filtrados.csv',
-                mime='text/csv',
-            )
+            col5, col6 = st.columns(2)
+            col5.metric("Dispersión Salarial", f"${dispersion_sueldo:,.0f} ({dispersion_porcentaje:.1f}%)")
+            col6.metric("Costo Laboral Total", f"${costo_total:,.0f}")
 
-            output = io.BytesIO()
-            with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
-                df_filtered.to_excel(writer, index=False, sheet_name='Datos Filtrados')
-                resumen = pd.DataFrame({
-                    'Total_personas': [len(df_filtered)],
-                    'Sueldo_Promedio': [promedio_sueldo],
-                    'Sueldo_Mínimo': [minimo_sueldo],
-                    'Sueldo_Máximo': [maximo_sueldo],
-                    'Dispersión_Salarial': [dispersion_sueldo],
-                    'Costo_laboral': [costo_total],
-                    'Porcentaje_<25%': [banda_25],
-                    'Porcentaje_<50%': [banda_50],
-                    'Porcentaje_<75%': [banda_75],
-                    'Porcentaje_≥75%': [banda_arriba_75]
+            if 'Especialidad' in df_filtered.columns:
+                st.markdown("### Distribución de Especialidad")
+                especialidad_chart = alt.Chart(especialidad_dist).mark_bar().encode(
+                    x=alt.X('Porcentaje:Q', title='Porcentaje (%)'),
+                    y=alt.Y('Especialidad:N', title='Especialidad', sort='-x'),
+                    tooltip=['Especialidad', alt.Tooltip('Porcentaje:Q', format='.1f')]
+                ).properties(height=300)
+                st.altair_chart(especialidad_chart, use_container_width=True)
+
+            if 'Porcentaje_Banda_Salarial' in df_filtered.columns:
+                st.markdown("### Distribución de Bandas Salariales")
+                banda_data = pd.DataFrame({
+                    'Categoría': ['< 25%', '25-50%', '50-75%', '≥ 75%'],
+                    'Porcentaje': [
+                        banda_25,
+                        banda_50 - banda_25,
+                        banda_75 - banda_50,
+                        banda_arriba_75
+                    ]
                 })
-                resumen.to_excel(writer, index=False, sheet_name='Resumen')
-            excel_data = output.getvalue()
-            st.download_button(
-                label="Descargar reporte en Excel",
-                data=excel_data,
-                file_name='reporte_sueldos.xlsx',
-                mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-            )
+                banda_chart = alt.Chart(banda_data).mark_arc().encode(
+                    theta=alt.Theta('Porcentaje:Q', stack=True),
+                    color=alt.Color('Categoría:N', legend=alt.Legend(title="Banda Salarial")),
+                    tooltip=['Categoría', alt.Tooltip('Porcentaje:Q', format='.1f')]
+                ).properties(width=300, height=300)
+                st.altair_chart(banda_chart, use_container_width=True)
 
-            if st.button("Generar reporte en PDF"):
-                pdf = FPDF()
-                pdf.add_page()
-                pdf.set_font("Arial", size=12)
+                st.markdown("**Porcentajes por Banda Salarial**:")
+                st.write(f"- Debajo del 25%: {banda_25:.1f}%")
+                st.write(f"- Debajo del 50%: {banda_50:.1f}%")
+                st.write(f"- Debajo del 75%: {banda_75:.1f}%")
+                st.write(f"- Arriba del 75%: {banda_arriba_75:.1f}%")
 
-                try:
-                    with tempfile.NamedTemporaryFile(delete=False, suffix=".png") as tmpfile:
-                        logo.save(tmpfile.name)
-                        pdf.image(tmpfile.name, x=10, y=8, w=50)
-                    os.unlink(tmpfile.name)
-                except Exception as e:
-                    pdf.cell(200, 10, txt="Logo no disponible", ln=True, align='C')
+        else:
+            st.info("No hay datos disponibles con los filtros actuales.")
+            promedio_sueldo = minimo_sueldo = maximo_sueldo = dispersion_sueldo = dispersion_porcentaje = costo_total = 0
+            banda_25 = banda_50 = banda_75 = banda_arriba_75 = 0
+            especialidad_dist = pd.DataFrame()
 
-                pdf.ln(30)
-                def clean_text(text):
-                    return ''.join(c for c in str(text) if ord(c) < 128)
+        st.markdown("### Comparación por Categoría")
+        agrupadores = [
+            'Empresa', 'CCT', 'Grupo', 'Comitente', 'Puesto', 'seniority', 'Gerencia', 'CVH',
+            'Puesto_tabla_salarial', 'Locacion', 'Centro_de_Costos', 'Especialidad', 'Superior'
+        ]
+        agrupadores = [col for col in agrupadores if col in df.columns]
+        grupo_seleccionado = st.selectbox("Selecciona una categoría para agrupar", agrupadores, index=agrupadores.index('Puesto_tabla_salarial') if 'Puesto_tabla_salarial' in agrupadores else 0)
 
-                pdf.cell(200, 10, txt=clean_text("Reporte de Sueldos - Sueldos para Informes"), ln=True, align='C')
-                pdf.ln(10)
-                pdf.cell(200, 10, txt=clean_text(f"Total personas: {len(df_filtered)}"), ln=True)
-                pdf.cell(200, 10, txt=clean_text(f"Sueldo promedio: ${promedio_sueldo:,.0f}"), ln=True)
-                pdf.cell(200, 10, txt=clean_text(f"Sueldo mínimo / máximo: ${minimo_sueldo:,.0f} / ${maximo_sueldo:,.0f}"), ln=True)
-                pdf.cell(200, 10, txt=clean_text(f"Dispersión salarial: ${dispersion_sueldo:,.0f} ({dispersion_porcentaje:.1f}%)"), ln=True)
-                pdf.cell(200, 10, txt=clean_text(f"Costo laboral total: ${costo_total:,.0f}"), ln=True)
-                pdf.cell(200, 10, txt=clean_text(f"Porcentaje <25%: {banda_25:.1f}%"), ln=True)
-                pdf.cell(200, 10, txt=clean_text(f"Porcentaje <50%: {banda_50:.1f}%"), ln=True)
-                pdf.cell(200, 10, txt=clean_text(f"Porcentaje <75%: {banda_75:.1f}%"), ln=True)
-                pdf.cell(200, 10, txt=clean_text(f"Porcentaje ≥75%: {banda_arriba_75:.1f}%"), ln=True)
+        if len(df_filtered) > 0:
+            if 'Total_sueldo_bruto' in df_filtered.columns:
+                grouped_data = df_filtered.groupby(grupo_seleccionado).agg({
+                    'Total_sueldo_bruto': ['mean', 'min', 'max'],
+                    'seniority': 'count'
+                }).reset_index()
+                grouped_data.columns = [grupo_seleccionado, 'Sueldo_Promedio', 'Sueldo_Mínimo', 'Sueldo_Máximo', 'Cantidad']
+                grouped_data = grouped_data.dropna(subset=[grupo_seleccionado, 'Sueldo_Promedio'])
+                grouped_data[grupo_seleccionado] = grouped_data[grupo_seleccionado].astype(str)
 
-                if len(df_filtered) < 20 and all(col in df_filtered.columns for col in ['Personaapellido', 'Personanombre', 'Puesto', 'Seniority', 'Porcentaje_Banda_Salarial', 'Total_sueldo_bruto']):
-                    pdf.ln(20)
-                    pdf.set_font("Arial", size=10)
-                    pdf.cell(200, 10, txt="Detalles de Personas (ordenado por Total Sueldo Bruto descendente)", ln=True, align='C')
-                    pdf.ln(5)
+                chart = alt.Chart(grouped_data).mark_bar().encode(
+                    x=alt.X(f"{grupo_seleccionado}:N", title=grupo_seleccionado, sort="-y"),
+                    y=alt.Y("Sueldo_Promedio:Q", title="Sueldo Bruto Promedio"),
+                    tooltip=[
+                        grupo_seleccionado,
+                        alt.Tooltip("Sueldo_Promedio:Q", title="Sueldo Promedio", format=",.0f"),
+                        alt.Tooltip("Sueldo_Mínimo:Q", title="Sueldo Mínimo", format=",.0f"),
+                        alt.Tooltip("Sueldo_Máximo:Q", title="Sueldo Máximo", format=",.0f")
+                    ]
+                ).properties(height=400)
+                st.altair_chart(chart, use_container_width=True)
 
-                    columns = ['Personaapellido', 'Personanombre', 'Puesto', 'Seniority', 'Porcentaje_Banda_Salarial', 'Total_sueldo_bruto']
-                    df_table = df_filtered[columns].sort_values(by='Total_sueldo_bruto', ascending=False)
-                    pdf.set_font("Arial", size=8)
+            if grupo_seleccionado == 'Puesto_tabla_salarial' and 'Puesto_tabla_salarial' in df_filtered.columns and 'seniority' in df_filtered.columns:
+                st.markdown("### Distribución de Seniority por Puesto Tabla Salarial")
+                puestos_opciones = ['Todos los puestos'] + sorted(df_filtered['Puesto_tabla_salarial'].unique().tolist())
+                puesto_seleccionado = st.selectbox("Selecciona un Puesto Tabla Salarial", puestos_opciones)
+                
+                gerencias = sorted(df_filtered['Gerencia'].unique().tolist())
+                gerencia_seleccionada = st.multiselect("Selecciona Gerencia(s)", gerencias, default=gerencias)
 
-                    for col in columns:
-                        pdf.cell(33, 10, clean_text(col.replace('_', ' ').title()), border=1, align='C')
+                if puesto_seleccionado == 'Todos los puestos':
+                    df_puesto = df_filtered[df_filtered['Gerencia'].isin(gerencia_seleccionada)]
+                else:
+                    df_puesto = df_filtered[
+                        (df_filtered['Puesto_tabla_salarial'] == puesto_seleccionado) &
+                        (df_filtered['Gerencia'].isin(gerencia_seleccionada))
+                    ]
+
+                if len(df_puesto) > 0:
+                    seniority_dist = df_puesto['seniority'].value_counts(normalize=True) * 100
+                    seniority_dist = seniority_dist.reset_index()
+                    seniority_dist.columns = ['Seniority', 'Porcentaje']
+
+                    seniority_chart = alt.Chart(seniority_dist).mark_arc().encode(
+                        theta=alt.Theta('Porcentaje:Q', stack=True),
+                        color=alt.Color('Seniority:N', legend=alt.Legend(title="Seniority")),
+                        tooltip=['Seniority', alt.Tooltip('Porcentaje:Q', format='.1f')]
+                    ).properties(width=300, height=300)
+                    st.altair_chart(seniority_chart, use_container_width=True)
+
+                    st.markdown("**Porcentajes de Seniority**:")
+                    for _, row in seniority_dist.iterrows():
+                        st.write(f"- {row['Seniority']}: {row['Porcentaje']:.1f}%")
+
+                    if puesto_seleccionado != 'Todos los puestos' and 'Total_sueldo_bruto' in df_puesto.columns:
+                        sueldo_stats = df_puesto['Total_sueldo_bruto'].agg(['min', 'mean', 'max']).round(0)
+                        st.markdown(f"**Sueldos para {puesto_seleccionado} (filtrado por Gerencia)**:")
+                        st.write(f"- Mínimo: ${sueldo_stats['min']:,.0f}")
+                        st.write(f"- Promedio: ${sueldo_stats['mean']:,.0f}")
+                        st.write(f"- Máximo: ${sueldo_stats['max']:,.0f}")
+                else:
+                    st.warning("No hay datos para el puesto tabla salarial y gerencia seleccionados.")
+
+            if grupo_seleccionado == 'seniority' and 'seniority' in df_filtered.columns and 'Total_sueldo_bruto' in df_filtered.columns:
+                sueldo_stats = grouped_data[['seniority', 'Sueldo_Mínimo', 'Sueldo_Promedio', 'Sueldo_Máximo']]
+                st.markdown("**Sueldos por Seniority**:")
+                st.dataframe(sueldo_stats)
+
+        else:
+            st.warning("No hay datos para mostrar en el gráfico de comparación por categoría.")
+
+        st.subheader("Tabla de Datos Filtrados")
+        st.dataframe(df_filtered)
+
+        csv = df_filtered.to_csv(index=False).encode('utf-8')
+        st.download_button(
+            label="Descargar datos filtrados como CSV",
+            data=csv,
+            file_name='sueldos_filtrados.csv',
+            mime='text/csv',
+        )
+
+        output = io.BytesIO()
+        with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+            df_filtered.to_excel(writer, index=False, sheet_name='Datos Filtrados')
+            resumen = pd.DataFrame({
+                'Total_personas': [len(df_filtered)],
+                'Sueldo_Promedio': [promedio_sueldo],
+                'Sueldo_Mínimo': [minimo_sueldo],
+                'Sueldo_Máximo': [maximo_sueldo],
+                'Dispersión_Salarial': [dispersion_sueldo],
+                'Costo_laboral': [costo_total],
+                'Porcentaje_<25%': [banda_25],
+                'Porcentaje_<50%': [banda_50],
+                'Porcentaje_<75%': [banda_75],
+                'Porcentaje_≥75%': [banda_arriba_75]
+            })
+            resumen.to_excel(writer, index=False, sheet_name='Resumen')
+        excel_data = output.getvalue()
+        st.download_button(
+            label="Descargar reporte en Excel",
+            data=excel_data,
+            file_name='reporte_sueldos.xlsx',
+            mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        )
+
+        if st.button("Generar reporte en PDF"):
+            pdf = FPDF()
+            pdf.add_page()
+            pdf.set_font("Arial", size=12)
+
+            try:
+                with tempfile.NamedTemporaryFile(delete=False, suffix=".png") as tmpfile:
+                    logo.save(tmpfile.name)
+                    pdf.image(tmpfile.name, x=10, y=8, w=50)
+                os.unlink(tmpfile.name)
+            except Exception as e:
+                pdf.cell(200, 10, txt="Logo no disponible", ln=True, align='C')
+
+            pdf.ln(30)
+            def clean_text(text):
+                return ''.join(c for c in str(text) if ord(c) < 128)
+
+            pdf.cell(200, 10, txt=clean_text("Reporte de Sueldos - Sueldos para Informes"), ln=True, align='C')
+            pdf.ln(10)
+            pdf.cell(200, 10, txt=clean_text(f"Total personas: {len(df_filtered)}"), ln=True)
+            pdf.cell(200, 10, txt=clean_text(f"Sueldo promedio: ${promedio_sueldo:,.0f}"), ln=True)
+            pdf.cell(200, 10, txt=clean_text(f"Sueldo mínimo / máximo: ${minimo_sueldo:,.0f} / ${maximo_sueldo:,.0f}"), ln=True)
+            pdf.cell(200, 10, txt=clean_text(f"Dispersión salarial: ${dispersion_sueldo:,.0f} ({dispersion_porcentaje:.1f}%)"), ln=True)
+            pdf.cell(200, 10, txt=clean_text(f"Costo laboral total: ${costo_total:,.0f}"), ln=True)
+            pdf.cell(200, 10, txt=clean_text(f"Porcentaje <25%: {banda_25:.1f}%"), ln=True)
+            pdf.cell(200, 10, txt=clean_text(f"Porcentaje <50%: {banda_50:.1f}%"), ln=True)
+            pdf.cell(200, 10, txt=clean_text(f"Porcentaje <75%: {banda_75:.1f}%"), ln=True)
+            pdf.cell(200, 10, txt=clean_text(f"Porcentaje ≥75%: {banda_arriba_75:.1f}%"), ln=True)
+
+            if len(df_filtered) < 20 and all(col in df_filtered.columns for col in ['Personaapellido', 'Personanombre', 'Puesto', 'Seniority', 'Porcentaje_Banda_Salarial', 'Total_sueldo_bruto']):
+                pdf.ln(20)
+                pdf.set_font("Arial", size=10)
+                pdf.cell(200, 10, txt="Detalles de Personas (ordenado por Total Sueldo Bruto descendente)", ln=True, align='C')
+                pdf.ln(5)
+
+                columns = ['Personaapellido', 'Personanombre', 'Puesto', 'Seniority', 'Porcentaje_Banda_Salarial', 'Total_sueldo_bruto']
+                df_table = df_filtered[columns].sort_values(by='Total_sueldo_bruto', ascending=False)
+                pdf.set_font("Arial", size=8)
+
+                for col in columns:
+                    pdf.cell(33, 10, clean_text(col.replace('_', ' ').title()), border=1, align='C')
+                pdf.ln()
+
+                for index, row in df_table.iterrows():
+                    pdf.cell(33, 10, clean_text(str(row['Personaapellido'])), border=1)
+                    pdf.cell(33, 10, clean_text(str(row['Personanombre'])), border=1)
+                    pdf.cell(33, 10, clean_text(str(row['Puesto'])), border=1)
+                    pdf.cell(33, 10, clean_text(str(row['Seniority'])), border=1)
+                    pdf.cell(33, 10, clean_text(f"{row['Porcentaje_Banda_Salarial']*100:.1f}%"), border=1)
+                    pdf.cell(35, 10, clean_text(f"${row['Total_sueldo_bruto']:,.0f}"), border=1)
                     pdf.ln()
 
-                    for index, row in df_table.iterrows():
-                        pdf.cell(33, 10, clean_text(str(row['Personaapellido'])), border=1)
-                        pdf.cell(33, 10, clean_text(str(row['Personanombre'])), border=1)
-                        pdf.cell(33, 10, clean_text(str(row['Puesto'])), border=1)
-                        pdf.cell(33, 10, clean_text(str(row['Seniority'])), border=1)
-                        pdf.cell(33, 10, clean_text(f"{row['Porcentaje_Banda_Salarial']*100:.1f}%"), border=1)
-                        pdf.cell(35, 10, clean_text(f"${row['Total_sueldo_bruto']:,.0f}"), border=1)
-                        pdf.ln()
+            try:
+                with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmpfile:
+                    pdf.output(tmpfile.name)
+                    with open(tmpfile.name, "rb") as f:
+                        st.download_button(
+                            label="Descargar reporte en PDF",
+                            data=f.read(),
+                            file_name="reporte_sueldos.pdf",
+                            mime="application/pdf"
+                        )
+                os.unlink(tmpfile.name)
+            except Exception as e:
+                st.error(f"Error al generar el PDF: {str(e)}")
 
-                try:
-                    with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmpfile:
-                        pdf.output(tmpfile.name)
-                        with open(tmpfile.name, "rb") as f:
-                            st.download_button(
-                                label="Descargar reporte en PDF",
-                                data=f.read(),
-                                file_name="reporte_sueldos.pdf",
-                                mime="application/pdf"
-                            )
-                    os.unlink(tmpfile.name)
-                except Exception as e:
-                    st.error(f"Error al generar el PDF: {str(e)}")
-
-            st.markdown("### Conclusión Final")
-            if len(df_filtered) > 0:
-                conclusion = f"""
-                - Se analizaron **{len(df_filtered)}** empleados.
-                - El sueldo bruto promedio es **${promedio_sueldo:,.0f}**.
-                - El costo laboral total asciende a **${costo_total:,.0f}**.
-                - La distribución de bandas salariales muestra que:
-                  - **{banda_25:.1f}%** está por debajo del 25% de la banda.
-                  - **{banda_50:.1f}%** está por debajo del 50%.
-                  - **{banda_75:.1f}%** está por debajo del 75%.
-                  - **{banda_arriba_75:.1f}%** está por encima del 75%.
-                - **Recomendación**: Revisar los puestos con alta dispersión salarial y seniority bajo para ajustar políticas de compensación.
-                """
-                st.markdown(conclusion)
-            else:
-                st.markdown("No hay datos suficientes para generar una conclusión. Ajuste los filtros para incluir más datos.")
-
-            st.markdown('</div>', unsafe_allow_html=True)
+        st.markdown("### Conclusión Final")
+        if len(df_filtered) > 0:
+            conclusion = f"""
+            - Se analizaron **{len(df_filtered)}** empleados.
+            - El sueldo bruto promedio es **${promedio_sueldo:,.0f}**.
+            - El costo laboral total asciende a **${costo_total:,.0f}**.
+            - La distribución de bandas salariales muestra que:
+              - **{banda_25:.1f}%** está por debajo del 25% de la banda.
+              - **{banda_50:.1f}%** está por debajo del 50%.
+              - **{banda_75:.1f}%** está por debajo del 75%.
+              - **{banda_arriba_75:.1f}%** está por encima del 75%.
+            - Las especialidades más comunes son **{especialidad_dist.iloc[0]['Especialidad'] if not especialidad_dist.empty else 'N/A'}** ({especialidad_dist.iloc[0]['Porcentaje']:.1f}% si aplica).
+            - **Recomendación**: Revisar los puestos con alta dispersión salarial y seniority bajo para ajustar políticas de compensación.
+            """
+            st.markdown(conclusion)
+        else:
+            st.markdown("No hay datos suficientes para generar una conclusión. Ajuste los filtros para incluir más datos.")
 
     # --- Página: Sueldos Todos ---
     elif page == "Sueldos Todos":
@@ -626,14 +638,14 @@ else:
             st.error("No se pudo cargar el archivo sueldos.xlsx. Verifica que el archivo exista y sea accesible.")
             st.stop()
 
-        df.columns = df.columns.str.strip().str.replace(' ', '_').lower()
-        if 'convenio' in df.columns:
-            df = df.rename(columns={'convenio': 'categoria'})
+        df.columns = df.columns.str.strip().str.replace(' ', '_').str.lower()
+        if 'conveniocategoria' in df.columns:
+            df = df.rename(columns={'conveniocategoria': 'categoria'})
 
-        categorical_columns = ['categoria', 'es_cvh', 'personaapellido', 'personanombre', 'comitente']
+        categorical_columns = ['empresa', 'es_cvh', 'personaapellido', 'personanombre', 'comitente']
         for col in categorical_columns:
             if col in df.columns:
-                df[col] = df[col].astype(str).replace(['#Ref', 'Sin dato'], 'Sin dato')
+                df[col] = df[col].astype(str).replace(['#Ref', 'nan', ''], 'Sin dato').replace('nan', 'Sin dato')
             else:
                 df[col] = 'Sin dato'
 
@@ -641,16 +653,16 @@ else:
         numeric_columns = ['total_sueldo_bruto', 'neto', 'total_costo_laboral']
         for col in numeric_columns:
             if col in df.columns:
-                df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0))
+                df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
             else:
                 df[col] = 0
 
         st.subheader("Filtros")
         filtros = {}
-        filter_columns = ['empresa', 'es_cvh', 'apellido_y_nombre', 'comitente']
+        filter_columns = ['empresa', 'es_cvh', 'apellido_nombre', 'comitente']
         for col in filter_columns:
             if col in df.columns:
-                unique_values = [x for x in df[col].dropna().unique() if str(x).strip() != 'Sin dato']
+                unique_values = [x for x in df[col].dropna().unique() if str(x).strip() != 'Sin dato Sin dato']
                 if len(unique_values) > 0:
                     label = col.replace('_', ' ').title()
                     filtros[col] = st.multiselect(f"{label}", unique_values, key=f"filter_{col}_sueldos")
@@ -686,11 +698,11 @@ else:
             col7.metric("Costo Laboral Promedio", f"${costo_laboral_promedio:,.0f}")
 
             st.subheader("Tabla de Datos Filtrados")
-            display_columns = ['empresa', 'es_cvh', 'apellido_y_nombre', 'comitente', 'total_sueldo_bruto', 'neto', 'total_costo_laboral']
+            display_columns = ['empresa', 'es_cvh', 'apellido_nombre', 'comitente', 'total_sueldo_bruto', 'neto', 'total_costo_laboral']
             st.dataframe(df_filtered[display_columns].rename(columns={
                 'empresa': 'Empresa',
                 'es_cvh': 'Cvh',
-                'apellido_y_nombre': 'Apellido y Nombre',
+                'apellido_nombre': 'Apellido nombre',
                 'comitente': 'Comitente',
                 'total_sueldo_bruto': 'Total Sueldo Bruto',
                 'neto': 'Neto',
@@ -844,11 +856,11 @@ else:
 
                 chart = alt.Chart(df_filtered).mark_bar().encode(
                     x=alt.X('Nombre_Completo:N', title='Persona', sort='-y', axis=alt.Axis(labelAngle=45)),
-                    y=alt.Y('Total_sueldo_bruto:Q', title='Sueldo Bruto ($)''),
+                    y=alt.Y('Total_sueldo_bruto:Q', title='Sueldo Bruto ($)'),
                     tooltip=[
                         'Nombre_Completo',
                         alt.Tooltip('Total_sueldo_bruto:Q', title='Sueldo Bruto', format='$,.0f'),
-                        st'P',
+                        'Puesto',
                         'Gerencia',
                         'seniority'
                     ]
@@ -860,8 +872,7 @@ else:
 
                 st.subheader("Datos Detallados")
                 display_columns = ['Nombre_Completo', 'Total_sueldo_bruto', 'seniority', 'Puesto', 'Gerencia']
-                st.dataframe(df_filtered[display])
-
+                st.dataframe(df_filtered[display_columns])
             else:
                 st.warning("No hay datos disponibles para comparar con los filtros seleccionados.")
 
@@ -880,8 +891,7 @@ else:
             st.error("No se encontró el archivo tabla salarial.xlsx")
             st.stop()
 
-        df_tabla = df_tabla.columns.str.strip().str.replace(' ', '')
-
+        df_tabla.columns = df_tabla.columns.str.strip().str.replace(' ', '_')
         puestos = sorted(df_tabla['Puesto'].unique())
         seniorities = sorted(df_tabla['Seniority'].unique())
         locaciones = sorted(df_tabla['Locacion'].unique())
@@ -899,8 +909,8 @@ else:
         df_selected_1 = df_tabla[
             (df_tabla['Puesto'] == selected_puesto_1) &
             (df_tabla['Seniority'] == selected_seniority_1) &
-            (df_tabla['Locacion'] == selected_locacion_1]
-        )
+            (df_tabla['Locacion'] == selected_locacion_1)
+        ]
 
         if not df_selected_1.empty:
             st.markdown(f"**Valores Salariales para {selected_puesto_1} - {selected_seniority_1} - {selected_locacion_1}**")
@@ -927,14 +937,14 @@ else:
         df_selected_2 = df_tabla[
             (df_tabla['Puesto'] == selected_puesto_2) &
             (df_tabla['Seniority'] == selected_seniority_2) &
-            (df_tabla['Locacion'] == selected_locacion_2]
-        )
+            (df_tabla['Locacion'] == selected_locacion_2)
+        ]
 
         if not df_selected_2.empty:
             st.markdown(f"**Valores Salariales para {selected_puesto_2} - {selected_seniority_2} - {selected_locacion_2}**")
             valores_2 = df_selected_2[['Q1', 'Q2', 'Q3', 'Q4', 'Q5']].iloc[0]
             col1, col2, col3, col4, col5 = st.columns(5)
-            col1.metric("Q1, "Q", f"${valores_2:,.0f}")
+            col1.metric("Q1", f"${valores_2['Q1']:,.0f}")
             col2.metric("Q2", f"${valores_2['Q2']:,.0f}")
             col3.metric("Q3", f"${valores_2['Q3']:,.0f}")
             col4.metric("Q4", f"${valores_2['Q4']:,.0f}")
@@ -955,7 +965,7 @@ else:
                 elif porcentaje_diferencia < 0:
                     st.write(f"El promedio de la segunda selección es {abs(porcentaje_diferencia):.2f}% menor que el de la primera.")
                 else:
-                    st.write("No hay diferencia entre los promedios de ambas selecciones.")
+                    st.write("No hay diferencia entre los promedios de las dos selecciones.")
             else:
                 st.warning("No se puede calcular el porcentaje de diferencia porque el promedio de la primera selección es 0.")
         elif valores_1 is None or valores_2 is None:
@@ -975,7 +985,6 @@ else:
             output = io.BytesIO()
             with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
                 df_tabla.to_excel(writer, index=False, sheet_name='Tabla Salarial')
-            )
             excel_data = output.getvalue()
             st.download_button(
                 label="Descargar tabla salarial completa como Excel",
@@ -983,4 +992,3 @@ else:
                 file_name='tabla_salarial.xlsx',
                 mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
             )
-```
