@@ -10,3 +10,8 @@ xlsxwriter==3.2.0
 matplotlib
 openpyxl
 pdf2image==1.17.0
+dash>=2.17.0
+dash-bootstrap-components>=1.6.0
+pandas>=2.0.3
+plotly>=5.22.0
+pillow>=10.0.0
