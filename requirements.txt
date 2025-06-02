@@ -1,6 +1,6 @@
 streamlit==1.38.0
-pandas==2.2.2
-numpy==1.26.4
+pandas==2.0.3
+numpy==1.24.3
 altair==5.4.1
 Pillow==10.4.0
 fpdf==1.7.2
