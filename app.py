@@ -879,7 +879,9 @@ else:
             st.error("No se encontró el archivo tabla salarial.xlsx")
             st.stop()
 
-df_tabla.columns = df_tabla.columns.str.strip().str.replace(' ', '')
+git add app.py
+git commit -m "Fix Tabla Salarial column handling"
+git push origin main
 
         puestos = sorted(df_tabla['Puesto'].unique())
         seniorities = sorted(df_tabla['Seniority'].unique())
